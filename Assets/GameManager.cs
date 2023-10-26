@@ -13,7 +13,7 @@ public class GameManager : MonoBehaviour
     public GameObject emptyHexPrefab;
     public GameObject cornerHexPrefab;
     public GameObject edgeHexPrefab;
-    public HexCoords[,] mapNodes;
+    public MapNodeCoords[,] mapNodes;
     internal List<GameObject> orderButtons = new List<GameObject>();
     private List<HexCoords> coords = new List<HexCoords>();
     private List<HexCoords> hexes = new List<HexCoords>();
@@ -29,7 +29,7 @@ public class GameManager : MonoBehaviour
         orderButtons.Add(GameObject.Find("Order4Button"));
         orderButtons.Add(GameObject.Find("Order5Button"));
         orderButtons.Add(GameObject.Find("Order6Button"));
-        mapNodes = new HexCoords[10,11];
+        mapNodes = new MapNodeCoords[10,11];
         GenerateMapNodes();
         GenerateRings();
         GameObject hexObj;
