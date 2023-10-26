@@ -15,76 +15,76 @@ public class GameManager : MonoBehaviour
     public GameObject cornerHexPrefab;
     public GameObject edgeHexPrefab;
     private GameObject circle;
-    public MapNodeCoords[,] mapNodes;
+    public HexCoords[,] mapNodes;
+    Transform HexCoordParent;
+    Transform MapTileParent;
     internal List<GameObject> orderButtons = new List<GameObject>();
-    private List<HexCoords> coords = new List<HexCoords>();
     private List<HexCoords> hexes = new List<HexCoords>();
+    private List<HexCoords> transforms = new List<HexCoords>()
+    {
+        new HexCoords(-1, 1),
+        new HexCoords(-1, 0),
+        new HexCoords(0, -1),
+        new HexCoords(1, -1),
+        new HexCoords(1, 0),
+        new HexCoords(0, 1)
+    };
+
     // Start is called before the first frame update
     void Start()
     {
         i = this;
+        HexCoordParent = GameObject.Find("HexCoordParent").transform;
+        MapTileParent = GameObject.Find("MapTileParent").transform;
         circle = Resources.Load<GameObject>("Prefabs/Circle");
         ship = GameObject.Find("Ship1").GetComponent<ShipManager>();
         gameBoard = GameObject.Find("GameBoard");
+        CreateUI();
+        GenerateTiles();
+        GenerateMapNodes();
+    }
+
+    private void GenerateTiles()
+    {
+        GenerateRings();
+        foreach (var hex in hexes)
+        {
+            var shape = hex.type == 0 ? emptyHexPrefab : hex.type == 1 ? edgeHexPrefab : cornerHexPrefab;
+            var position = new Vector3(hex.y * 1.5f, 0, hex.x * Mathf.Sqrt(3) + hex.y * 0.5f * Mathf.Sqrt(3)); // Difficult transformation from hexagonal to normal coordinates, with love <3 Tris.
+            var rotation = Quaternion.Euler(90, hex.rotation, 0);
+            Instantiate(shape, position, rotation, MapTileParent);
+        }
+    }
+
+    private void CreateUI()
+    {
         orderButtons.Add(GameObject.Find("Order1Button"));
         orderButtons.Add(GameObject.Find("Order2Button"));
         orderButtons.Add(GameObject.Find("Order3Button"));
         orderButtons.Add(GameObject.Find("Order4Button"));
         orderButtons.Add(GameObject.Find("Order5Button"));
         orderButtons.Add(GameObject.Find("Order6Button"));
-      
-        GenerateRings();
-        GameObject hexObj;
-        foreach (var hex in hexes)
-        {
-            if (hex.type == 0)
-            {
-                hexObj = Instantiate(emptyHexPrefab);
-            }
-            else if (hex.type == 1)
-            {
-                hexObj = Instantiate(edgeHexPrefab);
-            } 
-            else 
-            {
-                hexObj = Instantiate(cornerHexPrefab);
-            }
-            hexObj.transform.position = new Vector3(hex.y * 1.5f, 0, hex.x * Mathf.Sqrt(3) + hex.y * 0.5f * Mathf.Sqrt(3)); // Difficult transformation from hexagonal to normal coordinates, with love <3 Tris.
-            hexObj.transform.rotation = Quaternion.Euler(90, hex.rotation, 0);
-        }
-
-        GenerateMapNodes();
     }
 
     private void GenerateMapNodes()
     {
-        mapNodes = new MapNodeCoords[11,11];
+        mapNodes = new HexCoords[11,11];
         for (int i = 0; i < 11; i++)
         {
             for (int j = 0; j < 11; j++)
             {
-                mapNodes[i,j] = new MapNodeCoords(i, j);
+                mapNodes[i,j] = new HexCoords(i, j);
                 float scale = 1.73f;
                 float x = (1.732f * (j + 0.5f * i) / scale) - 7.51f; 
                 float z = (1.5f * i / scale) - 4.33f;
-                var nodePos = new Vector3(x, -.1f, z);
-                var newHex = Instantiate(circle, nodePos, Quaternion.identity);
+                var newHex = Instantiate(circle, new Vector3(x, -.1f, z), Quaternion.identity, HexCoordParent);
             }
         }
     }
-
+    
     public void GenerateRings()
     {
         int ringCount = 3;
-        List<HexCoords> transforms = new List<HexCoords>()
-        {
-            new HexCoords(-1, 1),
-            new HexCoords(-1, 0),
-            new HexCoords(0, -1),
-            new HexCoords(1, -1),
-            new HexCoords(1, 0),
-            new HexCoords(0, 1)
-        };
         int type = 0;
         int rotation = 0;
         for (int i = 0; i <= ringCount; i++)
@@ -124,20 +124,6 @@ public class GameManager : MonoBehaviour
     {
         StartCoroutine(ship.Move());
     }
-    public class MapNodeCoords
-    {
-        public MapNodeCoords(int i, int v, int type = 0, int rotation = 0)
-        {
-            this.x = i;
-            this.y = v;
-            this.type = type;
-            this.rotation = rotation;
-        }
-        public int x;
-        public int y;
-        public int type;
-        public int rotation;
-    }
     public class HexCoords
     {
         public HexCoords(int i, int v, int type = 0, int rotation = 0)
@@ -153,9 +139,4 @@ public class GameManager : MonoBehaviour
         public int rotation;
         public string label { get { return x + " " + y; } }
     }
-    public class Blockade
-    {
-        public HexCoords x { get; set; }
-        public HexCoords y { get; set; }
-    } 
 }
