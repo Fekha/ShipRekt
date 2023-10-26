@@ -58,16 +58,15 @@ public class GameManager : MonoBehaviour
 
     private void GenerateMapNodes()
     {
-        mapNodes = new MapNodeCoords[10,11];
-        for (int i = 0; i < 10; i++)
+        mapNodes = new MapNodeCoords[11,11];
+        for (int i = 0; i < 11; i++)
         {
             for (int j = 0; j < 11; j++)
             {
                 mapNodes[i,j] = new MapNodeCoords(i, j);
-                float offset = 7;
-                float scale = 1.7f;
-                float x = (1.732f * (j + 0.5f * i) - 11.7f) / scale; 
-                float z = (1.5f * i - 6.5f) / scale;
+                float scale = 1.73f;
+                float x = (1.732f * (j + 0.5f * i) / scale) - 7.51f; 
+                float z = (1.5f * i / scale) - 4.33f;
                 var nodePos = new Vector3(x, -.1f, z);
                 var newHex = Instantiate(circle, nodePos, Quaternion.identity);
             }
