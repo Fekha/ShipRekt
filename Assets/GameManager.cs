@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +14,7 @@ public class GameManager : MonoBehaviour
     public GameObject emptyHexPrefab;
     public GameObject cornerHexPrefab;
     public GameObject edgeHexPrefab;
+    private GameObject circle;
     public MapNodeCoords[,] mapNodes;
     internal List<GameObject> orderButtons = new List<GameObject>();
     private List<HexCoords> coords = new List<HexCoords>();
@@ -21,6 +23,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         i = this;
+        circle = Resources.Load<GameObject>("Prefabs/Circle");
         ship = GameObject.Find("Ship1").GetComponent<ShipManager>();
         gameBoard = GameObject.Find("GameBoard");
         orderButtons.Add(GameObject.Find("Order1Button"));
@@ -29,8 +32,7 @@ public class GameManager : MonoBehaviour
         orderButtons.Add(GameObject.Find("Order4Button"));
         orderButtons.Add(GameObject.Find("Order5Button"));
         orderButtons.Add(GameObject.Find("Order6Button"));
-        mapNodes = new MapNodeCoords[10,11];
-        GenerateMapNodes();
+      
         GenerateRings();
         GameObject hexObj;
         foreach (var hex in hexes)
@@ -50,15 +52,24 @@ public class GameManager : MonoBehaviour
             hexObj.transform.position = new Vector3(hex.y * 1.5f, 0, hex.x * Mathf.Sqrt(3) + hex.y * 0.5f * Mathf.Sqrt(3)); // Difficult transformation from hexagonal to normal coordinates, with love <3 Tris.
             hexObj.transform.rotation = Quaternion.Euler(90, hex.rotation, 0);
         }
+
+        GenerateMapNodes();
     }
 
     private void GenerateMapNodes()
     {
+        mapNodes = new MapNodeCoords[10,11];
         for (int i = 0; i < 10; i++)
         {
             for (int j = 0; j < 11; j++)
             {
                 mapNodes[i,j] = new MapNodeCoords(i, j);
+                float offset = 7;
+                float scale = 1.7f;
+                float x = (1.732f * (j + 0.5f * i) - 11.7f) / scale; 
+                float z = (1.5f * i - 6.5f) / scale;
+                var nodePos = new Vector3(x, -.1f, z);
+                var newHex = Instantiate(circle, nodePos, Quaternion.identity);
             }
         }
     }
