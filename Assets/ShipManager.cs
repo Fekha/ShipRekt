@@ -8,6 +8,9 @@ public class ShipManager : MonoBehaviour
 {
     private List<int> moves = new List<int>() { 1, 2, 3, 4, 5, 6 };
     public GameObject nose;
+    public int direction;
+    public HexCords currentPos;
+
     internal IEnumerator Move()
     {
         foreach (var orderButton in GameManager.i.orderButtons)
@@ -27,15 +30,21 @@ public class ShipManager : MonoBehaviour
                     }
                 case "2":
                     {
-                        while (targetPos != transform.position)
+                        var nextPosition = new HexCords(currentPos.x + GameManager.i.directions[direction].x, currentPos.y + GameManager.i.directions[direction].y);
+                        if (GameManager.i.mapNodes[nextPosition.x, nextPosition.y] != null)
                         {
-                            transform.position = Vector3.MoveTowards(transform.position, targetPos, speedMove * Time.deltaTime);
-                            yield return null;
+                            while (targetPos != transform.position)
+                            {
+                                transform.position = Vector3.MoveTowards(transform.position, targetPos, speedMove * Time.deltaTime);
+                                yield return null;
+                            }
+                            currentPos = nextPosition;
                         }
                         break;
                     }
                 case "3":
                     {
+                        direction = (direction + 1) % 6;
                         while (targetRotPos != transform.rotation)
                         {
                             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotPos, speedRot * Time.deltaTime);
@@ -46,6 +55,7 @@ public class ShipManager : MonoBehaviour
                     }
                 case "4":
                     {
+                        direction = direction == 0 ? 5 : direction - 1;
                         while (targetRotNeg != transform.rotation)
                         {
                             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotNeg, speedRot * Time.deltaTime);
