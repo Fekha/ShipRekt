@@ -1,22 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ShipManager : MonoBehaviour
 {
-    private List<int> moves = new List<int>() { 1, 2, 3, 4, 5, 6 };
     public GameObject nose;
-    public int direction;
-    public HexCords currentPos;
+    public HexDirection direction;
+    public HexCoords currentPos;
 
     internal IEnumerator Move()
     {
         foreach (var orderButton in GameManager.i.orderButtons)
         {
             orderButton.GetComponent<Button>().interactable = false;
-            var nextMove = orderButton.GetComponentsInChildren<Text>().FirstOrDefault(x => x.name == "Text").text;
+            var nextMove = (Orders)int.Parse(orderButton.GetComponentsInChildren<TextMeshProUGUI>().FirstOrDefault(x => x.name == "OrderText").text);
             var targetPos = nose.transform.position;
             var targetRotPos = Quaternion.Euler(90, (transform.rotation.eulerAngles.y + 60) % 360, 0);
             var targetRotNeg = Quaternion.Euler(90, transform.rotation.eulerAngles.y < 60 ? 300 + transform.rotation.eulerAngles.y : transform.rotation.eulerAngles.y - 60, 0);
@@ -24,13 +24,13 @@ public class ShipManager : MonoBehaviour
             var speedMove = 1f;
             switch (nextMove)
             {
-                case "1":
+                case Orders.Evade:
                     {
                         break;
                     }
-                case "2":
+                case Orders.Move:
                     {
-                        var nextPosition = new HexCords(currentPos.x + GameManager.i.directions[direction].x, currentPos.y + GameManager.i.directions[direction].y);
+                        var nextPosition = new HexCoords(currentPos.x + HexDirections.directionMap[direction].x, currentPos.y + HexDirections.directionMap[direction].y);
                         if (GameManager.i.mapNodes[nextPosition.x, nextPosition.y] != null)
                         {
                             while (targetPos != transform.position)
@@ -42,9 +42,9 @@ public class ShipManager : MonoBehaviour
                         }
                         break;
                     }
-                case "3":
+                case Orders.TurnRight:
                     {
-                        direction = (direction + 1) % 6;
+                        direction = (HexDirection)(((int)direction + 1) % 6);
                         while (targetRotPos != transform.rotation)
                         {
                             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotPos, speedRot * Time.deltaTime);
@@ -53,9 +53,9 @@ public class ShipManager : MonoBehaviour
                         }
                         break;
                     }
-                case "4":
+                case Orders.TurnLeft:
                     {
-                        direction = direction == 0 ? 5 : direction - 1;
+                        direction = direction == HexDirection.BottomRight ? HexDirection.Right : direction - 1;
                         while (targetRotNeg != transform.rotation)
                         {
                             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotNeg, speedRot * Time.deltaTime);
@@ -64,10 +64,28 @@ public class ShipManager : MonoBehaviour
                         }
                         break;
                     }
+                case Orders.ShootRight:
+                {
+                    break;
+                }
+                case Orders.ShootLeft:
+                {
+                    break;
+                }
             }
             yield return new WaitForSeconds(.5f);
         }
         GameManager.i.orderButtons.ForEach(x => x.GetComponent<Button>().interactable = true);
     }
 
+}
+
+public enum Orders
+{
+    Evade,
+    Move,
+    TurnRight,
+    TurnLeft,
+    ShootRight,
+    ShootLeft
 }

@@ -1,18 +1,40 @@
-﻿using System;
-using TMPro;
-using UnityEngine;
+using System.Collections.Generic;
+using static GameManager;
 
-internal class HexManager : MonoBehaviour
+public enum HexDirection
 {
-    private TextMeshPro text;
-    internal int x;
-    internal int y;
+    BottomRight,
+    BottomLeft,
+    Left,
+    TopLeft,
+    TopRight,
+    Right
+}
 
-    internal void UpdateLabel(int i, int j)
+public class HexCoords
+{
+    public HexCoords(int i, int j, int type = 0, int rotation = 0)
     {
         x = i;
         y = j;
-        text = GetComponentInChildren<TextMeshPro>();
-        text.text = $"{x},{y}";
+        this.type = type;
+        this.rotation = rotation;
     }
+    public int x;
+    public int y;
+    public int type;
+    public int rotation;
+}
+
+public class HexDirections
+{
+    public static Dictionary<HexDirection, HexCoords> directionMap = new Dictionary<HexDirection, HexCoords>()
+    {
+        { HexDirection.BottomRight, new HexCoords(-1, 1) },
+        { HexDirection.BottomLeft, new HexCoords(-1, 0) },
+        { HexDirection.Left, new HexCoords(0, -1) },
+        { HexDirection.TopLeft, new HexCoords(1, -1) },
+        { HexDirection.TopRight, new HexCoords(1, 0) },
+        { HexDirection.Right, new HexCoords(0, 1) }
+    };
 }

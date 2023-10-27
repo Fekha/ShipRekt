@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,17 +18,8 @@ public class GameManager : MonoBehaviour
     Transform HexCoordParent;
     Transform MapTileParent;
     internal List<GameObject> orderButtons = new List<GameObject>();
-    internal HexCords[,] mapNodes;
-    private List<TileCords> tiles = new List<TileCords>();
-    internal List<HexCords> directions = new List<HexCords>()
-    {
-        new HexCords(-1, 1),//bottomRight
-        new HexCords(-1, 0),//bottomLeft
-        new HexCords(0, -1),//left
-        new HexCords(1, -1),//topLeft
-        new HexCords(1, 0),//topRight
-        new HexCords(0, 1)//right
-    };
+    internal HexCoords[,] mapNodes;
+    private List<HexCoords> tiles = new List<HexCoords>();
 
     // Start is called before the first frame update
     void Start()
@@ -37,8 +29,8 @@ public class GameManager : MonoBehaviour
         MapTileParent = GameObject.Find("MapTileParent").transform;
         circle = Resources.Load<GameObject>("Prefabs/Circle");
         ship = GameObject.Find("Ship1").GetComponent<ShipManager>();
-        ship.currentPos = new HexCords(5, 5);
-        ship.direction = 3;
+        ship.currentPos = new HexCoords(5, 5);
+        ship.direction = HexDirection.TopLeft;
         CreateUI();
         GenerateMapNodes();
         GenerateTiles();
@@ -76,11 +68,11 @@ public class GameManager : MonoBehaviour
             if (i == ringCount)
             {
                 type = 1;
-                tiles.Add(new TileCords(i, 0, 2, 60));
+                tiles.Add(new HexCoords(i, 0, 2, 60));
             }
             else
             {
-                tiles.Add(new TileCords(i, 0, type, rotation));
+                tiles.Add(new HexCoords(i, 0, type, rotation));
             }
             for (int j = 0; j < 6; j++)
             {
@@ -93,19 +85,21 @@ public class GameManager : MonoBehaviour
                 {
                     if (i == ringCount && max - 1 == k && j != 5)
                     {
-                        tiles.Add(new TileCords(tiles[tiles.Count - 1].x + directions[j].x, tiles[tiles.Count - 1].y + directions[j].y, 2, rotation));
+                        tiles.Add(new HexCoords(tiles[tiles.Count - 1].x + HexDirections.directionMap[(HexDirection)j].x, tiles[tiles.Count - 1].y + HexDirections.directionMap[(HexDirection)j].y, 2, rotation));
                     }
                     else
                     {
-                        tiles.Add(new TileCords(tiles[tiles.Count - 1].x + directions[j].x, tiles[tiles.Count - 1].y + directions[j].y, type, rotation));
+                        tiles.Add(new HexCoords(tiles[tiles.Count - 1].x + HexDirections.directionMap[(HexDirection)j].x, tiles[tiles.Count - 1].y + HexDirections.directionMap[(HexDirection)j].y, type, rotation));
                     }
                 }
             }
         }
     }
+
+
     private void GenerateMapNodes()
     {
-        mapNodes = new HexCords[11, 11];
+        mapNodes = new HexCoords[11, 11];
         for (int i = 0; i < 11; i++)
         {
             for (int j = 0; j < 11; j++)
@@ -122,13 +116,11 @@ public class GameManager : MonoBehaviour
                     (j == 9 && i < 7) ||
                     (j == 10 && (i >= 1 && i < 5)))
                 {
-                    mapNodes[i, j] = new HexCords(i, j);
+                    mapNodes[i, j] = new HexCoords(i, j);
                     float scale = 1.73f;
                     float x = (1.732f * (j + 0.5f * i) / scale) - 7.51f;
                     float z = (1.5f * i / scale) - 4.33f;
                     var newHex = Instantiate(circle, new Vector3(x, 0, z), Quaternion.identity, HexCoordParent);
-                    var newHexComponent = newHex.AddComponent<HexManager>();
-                    newHexComponent.UpdateLabel(i, j);
                 }
             }
         }
@@ -137,20 +129,21 @@ public class GameManager : MonoBehaviour
     {
         StartCoroutine(ship.Move());
     }
-    public class TileCords
+
+    public void ChangeNumber(TextMeshProUGUI text)
     {
-        public TileCords(int i, int j, int type = 0, int rotation = 0)
-        {
-            x = i;
-            y = j;
-            this.type = type;
-            this.rotation = rotation;
-        }
-        public int x;
-        public int y;
-        public int type;
-        public int rotation;
-        public string label { get { return x + " " + y; } }
+        if (text.text == "0")
+            text.text = "1";
+        else if(text.text == "1")
+            text.text = "2";
+        else if (text.text == "2")
+            text.text = "3";
+        else if (text.text == "3")
+            text.text = "4";
+        else if (text.text == "4")
+            text.text = "5";
+        else if (text.text == "5")
+            text.text = "0";
     }
    
 }
