@@ -24,6 +24,10 @@ public class HexCoords
     public int y;
     public int type;
     public int rotation;
+    public bool Compare(HexCoords newCoords)
+    {
+        return newCoords.x == x && newCoords.y == y;
+    }
 }
 
 public class HexDirections

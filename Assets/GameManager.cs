@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
     Transform HexCoordParent;
     Transform MapTileParent;
     internal List<GameObject> orderButtons = new List<GameObject>();
-    internal HexCoords[,] mapNodes;
+    internal GameObject[,] mapNodes;
     private List<HexCoords> tiles = new List<HexCoords>();
 
     // Start is called before the first frame update
@@ -28,14 +28,15 @@ public class GameManager : MonoBehaviour
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
         MapTileParent = GameObject.Find("MapTileParent").transform;
         circle = Resources.Load<GameObject>("Prefabs/Circle");
-        ship = GameObject.Find("Ship1").GetComponent<ShipManager>();
-        ship.currentPos = new HexCoords(5, 5);
-        ship.direction = HexDirection.TopLeft;
         CreateUI();
         GenerateMapNodes();
         GenerateTiles();
+        ship = Instantiate(Resources.Load<ShipManager>("Prefabs/Ship"), GetShipCoords(mapNodes[5,5].transform.position), Quaternion.Euler(90,60,0));
     }
-
+    public Vector3 GetShipCoords(Vector3 position)
+    {
+        return new Vector3(position.x, 0.1f, position.z);
+    }
     private void CreateUI()
     {
         orderButtons.Add(GameObject.Find("Order1Button"));
@@ -99,7 +100,7 @@ public class GameManager : MonoBehaviour
 
     private void GenerateMapNodes()
     {
-        mapNodes = new HexCoords[11, 11];
+        mapNodes = new GameObject[11, 11];
         for (int i = 0; i < 11; i++)
         {
             for (int j = 0; j < 11; j++)
@@ -116,11 +117,14 @@ public class GameManager : MonoBehaviour
                     (j == 9 && i < 7) ||
                     (j == 10 && (i >= 1 && i < 5)))
                 {
-                    mapNodes[i, j] = new HexCoords(i, j);
                     float scale = 1.73f;
                     float x = (1.732f * (j + 0.5f * i) / scale) - 7.51f;
                     float z = (1.5f * i / scale) - 4.33f;
                     var newHex = Instantiate(circle, new Vector3(x, 0, z), Quaternion.identity, HexCoordParent);
+                    newHex.name = $"Hex {i},{j}";
+                    if(newHex.GetComponentInChildren<TextMeshPro>() != null)
+                        newHex.GetComponentInChildren<TextMeshPro>().text = $"{i},{j}";
+                    mapNodes[i, j] = newHex;
                 }
             }
         }
