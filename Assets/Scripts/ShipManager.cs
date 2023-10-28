@@ -6,6 +6,7 @@ using System.Net.NetworkInformation;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static GameManager;
 
 public class ShipManager : MonoBehaviour
 {
@@ -23,10 +24,11 @@ public class ShipManager : MonoBehaviour
     }
     internal IEnumerator Move()
     {
-        foreach (var orderButton in GameManager.i.orderButtons)
+        int i = 0;
+        foreach (var nextOrder in GameManager.i.orders)
         {
-            orderButton.GetComponent<Button>().interactable = false;
-            var nextOrder = (Orders)int.Parse(orderButton.GetComponentsInChildren<TextMeshProUGUI>().FirstOrDefault(x => x.name == "OrderText").text);
+            GameManager.i.orderButtons[i].interactable = false;
+            i++;
             var speedRot = 100f;
             switch (nextOrder)
             {
@@ -92,7 +94,7 @@ public class ShipManager : MonoBehaviour
             }
             yield return new WaitForSeconds(.5f);
         }
-        GameManager.i.orderButtons.ForEach(x => x.GetComponent<Button>().interactable = true);
+        GameManager.i.orderButtons.ForEach(x => x.interactable = true);
     }
 
     private HexCoords GetNextPosition()
@@ -177,12 +179,4 @@ public class ShipManager : MonoBehaviour
     }
 }
 
-public enum Orders
-{
-    Evade,
-    Move,
-    TurnRight,
-    TurnLeft,
-    ShootRight,
-    ShootLeft
-}
+

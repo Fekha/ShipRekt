@@ -17,7 +17,8 @@ public class GameManager : MonoBehaviour
     private GameObject circle;
     Transform HexCoordParent;
     Transform MapTileParent;
-    internal List<GameObject> orderButtons = new List<GameObject>();
+    internal List<Button> orderButtons = new List<Button>();
+    public Orders[] orders;
     internal GameObject[,] mapNodes;
     private List<HexCoords> tiles = new List<HexCoords>();
 
@@ -25,6 +26,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         i = this;
+        orders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
         MapTileParent = GameObject.Find("MapTileParent").transform;
         circle = Resources.Load<GameObject>("Prefabs/Circle");
@@ -39,12 +41,12 @@ public class GameManager : MonoBehaviour
     }
     private void CreateUI()
     {
-        orderButtons.Add(GameObject.Find("Order1Button"));
-        orderButtons.Add(GameObject.Find("Order2Button"));
-        orderButtons.Add(GameObject.Find("Order3Button"));
-        orderButtons.Add(GameObject.Find("Order4Button"));
-        orderButtons.Add(GameObject.Find("Order5Button"));
-        orderButtons.Add(GameObject.Find("Order6Button"));
+        orderButtons.Add(GameObject.Find("Order0Button").GetComponent<Button>());
+        orderButtons.Add(GameObject.Find("Order1Button").GetComponent<Button>());
+        orderButtons.Add(GameObject.Find("Order2Button").GetComponent<Button>());
+        orderButtons.Add(GameObject.Find("Order3Button").GetComponent<Button>());
+        orderButtons.Add(GameObject.Find("Order4Button").GetComponent<Button>());
+        orderButtons.Add(GameObject.Find("Order5Button").GetComponent<Button>());
     }
 
     private void GenerateTiles()
@@ -96,8 +98,6 @@ public class GameManager : MonoBehaviour
             }
         }
     }
-
-
     private void GenerateMapNodes()
     {
         mapNodes = new GameObject[11, 11];
@@ -133,21 +133,46 @@ public class GameManager : MonoBehaviour
     {
         StartCoroutine(ship.Move());
     }
-
-    public void ChangeNumber(TextMeshProUGUI text)
+    public void ChangeNumber(int orderNumber)
     {
-        if (text.text == "0")
-            text.text = "1";
-        else if(text.text == "1")
-            text.text = "2";
-        else if (text.text == "2")
-            text.text = "3";
-        else if (text.text == "3")
-            text.text = "4";
-        else if (text.text == "4")
-            text.text = "5";
-        else if (text.text == "5")
-            text.text = "0";
+        if (orders[orderNumber] == Orders.Evade)
+        {
+            GameObject.Find("Order"+ orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/Move");
+            orders[orderNumber] = Orders.Move;
+        }
+        else if(orders[orderNumber] == Orders.Move)
+        {
+            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/TurnRight");
+            orders[orderNumber] = Orders.TurnRight;
+        }
+        else if (orders[orderNumber] == Orders.TurnRight)
+        {
+            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/TurnLeft");
+            orders[orderNumber] = Orders.TurnLeft;
+        }
+        else if (orders[orderNumber] == Orders.TurnLeft)
+        {
+            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/ShootRight");
+            orders[orderNumber] = Orders.ShootRight;
+        }
+        else if (orders[orderNumber] == Orders.ShootRight)
+        {
+            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/ShootLeft");
+            orders[orderNumber] = Orders.ShootLeft;
+        }
+        else if (orders[orderNumber] == Orders.ShootLeft)
+        {
+            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/Evade");
+            orders[orderNumber] = Orders.Evade;
+        }
     }
-   
+    public enum Orders
+    {
+        Evade,
+        Move,
+        TurnRight,
+        TurnLeft,
+        ShootRight,
+        ShootLeft
+    }
 }
