@@ -11,16 +11,11 @@ public class GameManager : MonoBehaviour
 {
     internal static GameManager i;
     private ShipManager ship;
-    public GameObject emptyHexPrefab;
-    public GameObject cornerHexPrefab;
-    public GameObject edgeHexPrefab;
     private GameObject circle;
     Transform HexCoordParent;
-    Transform MapTileParent;
     internal List<Button> orderButtons = new List<Button>();
-    public Orders[] orders;
+    internal Orders[] orders;
     internal GameObject[,] mapNodes;
-    private List<HexCoords> tiles = new List<HexCoords>();
 
     // Start is called before the first frame update
     void Start()
@@ -28,12 +23,14 @@ public class GameManager : MonoBehaviour
         i = this;
         orders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
-        MapTileParent = GameObject.Find("MapTileParent").transform;
         circle = Resources.Load<GameObject>("Prefabs/Circle");
         CreateUI();
         GenerateMapNodes();
-        GenerateTiles();
         ship = Instantiate(Resources.Load<ShipManager>("Prefabs/Ship"), GetShipCoords(mapNodes[5,5].transform.position), Quaternion.Euler(90,60,0));
+    }
+    public void StartMatch()
+    {
+        StartCoroutine(ship.Move());
     }
     public Vector3 GetShipCoords(Vector3 position)
     {
@@ -47,56 +44,6 @@ public class GameManager : MonoBehaviour
         orderButtons.Add(GameObject.Find("Order3Button").GetComponent<Button>());
         orderButtons.Add(GameObject.Find("Order4Button").GetComponent<Button>());
         orderButtons.Add(GameObject.Find("Order5Button").GetComponent<Button>());
-    }
-
-    private void GenerateTiles()
-    {
-        GenerateRings();
-        foreach (var hex in tiles)
-        {
-            var shape = hex.type == 0 ? emptyHexPrefab : hex.type == 1 ? edgeHexPrefab : cornerHexPrefab;
-            var position = new Vector3(hex.y * 1.5f, 0, hex.x * Mathf.Sqrt(3) + hex.y * 0.5f * Mathf.Sqrt(3)); // Difficult transformation from hexagonal to normal coordinates, with love <3 Tris.
-            var rotation = Quaternion.Euler(90, hex.rotation, 0);
-            Instantiate(shape, position, rotation, MapTileParent);
-        }
-    }
-
-    public void GenerateRings()
-    {
-        int ringCount = 3;
-        int type = 0;
-        int rotation = 0;
-        for (int i = 0; i <= ringCount; i++)
-        {
-            if (i == ringCount)
-            {
-                type = 1;
-                tiles.Add(new HexCoords(i, 0, 2, 60));
-            }
-            else
-            {
-                tiles.Add(new HexCoords(i, 0, type, rotation));
-            }
-            for (int j = 0; j < 6; j++)
-            {
-                if (i == ringCount)
-                {
-                    rotation = (120 + (j * 60)) % 360;
-                }
-                var max = (j == 5 ? i - 1 : i);
-                for (int k = 0; k < max; k++)
-                {
-                    if (i == ringCount && max - 1 == k && j != 5)
-                    {
-                        tiles.Add(new HexCoords(tiles[tiles.Count - 1].x + HexDirections.directionMap[(HexDirection)j].x, tiles[tiles.Count - 1].y + HexDirections.directionMap[(HexDirection)j].y, 2, rotation));
-                    }
-                    else
-                    {
-                        tiles.Add(new HexCoords(tiles[tiles.Count - 1].x + HexDirections.directionMap[(HexDirection)j].x, tiles[tiles.Count - 1].y + HexDirections.directionMap[(HexDirection)j].y, type, rotation));
-                    }
-                }
-            }
-        }
     }
     private void GenerateMapNodes()
     {
@@ -128,10 +75,6 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-    }
-    public void StartMatch()
-    {
-        StartCoroutine(ship.Move());
     }
     public void ChangeNumber(int orderNumber)
     {
@@ -165,14 +108,5 @@ public class GameManager : MonoBehaviour
             GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/Evade");
             orders[orderNumber] = Orders.Evade;
         }
-    }
-    public enum Orders
-    {
-        Evade,
-        Move,
-        TurnRight,
-        TurnLeft,
-        ShootRight,
-        ShootLeft
     }
 }

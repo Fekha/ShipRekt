@@ -1,15 +1,4 @@
 using System.Collections.Generic;
-using static GameManager;
-
-public enum HexDirection
-{
-    BottomRight,
-    BottomLeft,
-    Left,
-    TopLeft,
-    TopRight,
-    Right
-}
 
 public class HexCoords
 {
