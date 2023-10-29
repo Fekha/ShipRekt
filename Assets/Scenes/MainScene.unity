@@ -1520,7 +1520,7 @@ GameObject:
   - component: {fileID: 413728254}
   - component: {fileID: 413728253}
   m_Layer: 5
-  m_Name: Selected5
+  m_Name: Selected
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1807,7 +1807,7 @@ GameObject:
   - component: {fileID: 435601970}
   - component: {fileID: 435601969}
   m_Layer: 5
-  m_Name: Selected3
+  m_Name: Selected
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3279,7 +3279,7 @@ GameObject:
   - component: {fileID: 913699098}
   - component: {fileID: 913699097}
   m_Layer: 5
-  m_Name: Order5
+  m_Name: Order
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3923,7 +3923,7 @@ GameObject:
   - component: {fileID: 1062522809}
   - component: {fileID: 1062522808}
   m_Layer: 5
-  m_Name: Selected2
+  m_Name: Selected
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4210,7 +4210,7 @@ GameObject:
   - component: {fileID: 1142791038}
   - component: {fileID: 1142791037}
   m_Layer: 5
-  m_Name: Order2
+  m_Name: Order
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4466,7 +4466,7 @@ GameObject:
   - component: {fileID: 1216891564}
   - component: {fileID: 1216891563}
   m_Layer: 5
-  m_Name: Selected0
+  m_Name: Selected
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4813,13 +4813,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1446523616}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+  m_LocalRotation: {x: 0.61237246, y: -0.3535534, z: 0.3535534, w: 0.61237246}
   m_LocalPosition: {x: 1.7176375, y: 1.8582959, z: 3.3374252}
   m_LocalScale: {x: 2.05, y: 2.05, z: 2.05}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 159853653}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 60}
 --- !u!64 &1446523618
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -5159,13 +5159,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1494704713}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0.7071068, z: 0.7071068, w: 0}
+  m_LocalRotation: {x: 0.35355335, y: -0.61237246, z: 0.61237246, w: 0.35355335}
   m_LocalPosition: {x: 1.7176375, y: 1.8582959, z: -1.858727}
   m_LocalScale: {x: 2.05, y: 2.05, z: 2.05}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 159853653}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 180}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 120}
 --- !u!64 &1494704715
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -5250,7 +5250,7 @@ GameObject:
   - component: {fileID: 1576609705}
   - component: {fileID: 1576609704}
   m_Layer: 5
-  m_Name: Order1
+  m_Name: Order
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5537,7 +5537,7 @@ GameObject:
   - component: {fileID: 1615637125}
   - component: {fileID: 1615637124}
   m_Layer: 5
-  m_Name: Selected1
+  m_Name: Selected
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5612,7 +5612,7 @@ GameObject:
   - component: {fileID: 1620402248}
   - component: {fileID: 1620402247}
   m_Layer: 5
-  m_Name: Order3
+  m_Name: Order
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5821,7 +5821,7 @@ GameObject:
   - component: {fileID: 1693028517}
   - component: {fileID: 1693028516}
   m_Layer: 5
-  m_Name: Selected4
+  m_Name: Selected
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6214,7 +6214,7 @@ GameObject:
   - component: {fileID: 1832838055}
   - component: {fileID: 1832838054}
   m_Layer: 5
-  m_Name: Order4
+  m_Name: Order
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
