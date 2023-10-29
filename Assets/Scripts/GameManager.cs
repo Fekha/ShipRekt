@@ -12,21 +12,44 @@ public class GameManager : MonoBehaviour
     internal static GameManager i;
     private ShipManager ship;
     private GameObject circle;
+    private GameObject OrderPanel;
     Transform HexCoordParent;
     internal List<Button> orderButtons = new List<Button>();
-    internal Orders[] orders;
+    internal Orders[] newOrders;
+    internal Orders[] oldOrders;
     internal GameObject[,] mapNodes;
-
+    private bool isBoardMaximized = true;
+    private Sprite Move;
+    private Sprite TurnRight;
+    private Sprite TurnLeft;
+    private Sprite ShootRight;
+    private Sprite ShootLeft;
+    private Sprite Evade;
+    public List<HexCoords> spawns = new List<HexCoords>();
+    private ShipManager shipPrefab;
     // Start is called before the first frame update
     void Start()
     {
         i = this;
-        orders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
+        newOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
+        oldOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
+        spawns = new List<HexCoords>() { new HexCoords(2,5,0,4), new HexCoords(2,8,5,3), new HexCoords(5,8,4,2), new HexCoords(8,5,3,1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
+        Evade = Resources.Load<Sprite>("Sprites/Evade");
+        Move = Resources.Load<Sprite>("Sprites/Move");
+        TurnRight = Resources.Load<Sprite>("Sprites/TurnRight");
+        TurnLeft = Resources.Load<Sprite>("Sprites/TurnLeft");
+        ShootRight = Resources.Load<Sprite>("Sprites/ShootRight");
+        ShootLeft = Resources.Load<Sprite>("Sprites/ShootLeft");
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
+        OrderPanel = GameObject.Find("OrderPanel");
         circle = Resources.Load<GameObject>("Prefabs/Circle");
+        shipPrefab = Resources.Load<ShipManager>("Prefabs/Ship");
+
         CreateUI();
         GenerateMapNodes();
-        ship = Instantiate(Resources.Load<ShipManager>("Prefabs/Ship"), GetShipCoords(mapNodes[5,5].transform.position), Quaternion.Euler(90,60,0));
+        var randomSpawn = spawns[UnityEngine.Random.Range(0, spawns.Count)];
+        ship = Instantiate(shipPrefab, GetShipCoords(mapNodes[randomSpawn.x, randomSpawn.y].transform.position), Quaternion.Euler(90, (randomSpawn.rotation * 60) % 360, 0));
+        ship.CreateShip(randomSpawn);
     }
     public void StartMatch()
     {
@@ -76,37 +99,73 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+
+    public void MaximizeBoard()
+    {
+        isBoardMaximized = !isBoardMaximized;
+        if (isBoardMaximized)
+        {
+            OrderPanel.GetComponent<RectTransform>().anchoredPosition = new Vector3(OrderPanel.GetComponent<RectTransform>().anchoredPosition.x, -246, 0);
+        }
+        else
+        {
+            OrderPanel.GetComponent<RectTransform>().anchoredPosition = new Vector3(OrderPanel.GetComponent<RectTransform>().anchoredPosition.x, -408.9674f, 0);
+        }
+        OrderPanel.transform.Find("MaximizeButton").Rotate(0, 0, 180);
+    }
     public void ChangeNumber(int orderNumber)
     {
-        if (orders[orderNumber] == Orders.Evade)
+        var differences = FindDifferences(newOrders, oldOrders);
+        if (differences.Count < 2 || differences.Contains(orderNumber))
         {
-            GameObject.Find("Order"+ orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/Move");
-            orders[orderNumber] = Orders.Move;
+            if (newOrders[orderNumber] == Orders.Evade)
+            {
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = Move;
+                newOrders[orderNumber] = Orders.Move;
+            }
+            else if (newOrders[orderNumber] == Orders.Move)
+            {
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = TurnRight;
+                newOrders[orderNumber] = Orders.TurnRight;
+            }
+            else if (newOrders[orderNumber] == Orders.TurnRight)
+            {
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = TurnLeft;
+                newOrders[orderNumber] = Orders.TurnLeft;
+            }
+            else if (newOrders[orderNumber] == Orders.TurnLeft)
+            {
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = ShootRight;
+                newOrders[orderNumber] = Orders.ShootRight;
+            }
+            else if (newOrders[orderNumber] == Orders.ShootRight)
+            {
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = ShootLeft;
+                newOrders[orderNumber] = Orders.ShootLeft;
+            }
+            else if (newOrders[orderNumber] == Orders.ShootLeft)
+            {
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = Evade;
+                newOrders[orderNumber] = Orders.Evade;
+            }
         }
-        else if(orders[orderNumber] == Orders.Move)
+        differences = FindDifferences(newOrders, oldOrders);
+        for(int i = 0; i < 6; i++)
         {
-            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/TurnRight");
-            orders[orderNumber] = Orders.TurnRight;
+            orderButtons[i].transform.Find("Selected").gameObject.SetActive(differences.Contains(i));
         }
-        else if (orders[orderNumber] == Orders.TurnRight)
+    }
+
+    private List<int> FindDifferences(Orders[] newOrders, Orders[] oldOrders)
+    {
+        var values = new List<int>();
+        for(int i = 0; i < newOrders.Length; i++)
         {
-            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/TurnLeft");
-            orders[orderNumber] = Orders.TurnLeft;
+            if (newOrders[i] != oldOrders[i])
+            {
+                values.Add(i);
+            }
         }
-        else if (orders[orderNumber] == Orders.TurnLeft)
-        {
-            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/ShootRight");
-            orders[orderNumber] = Orders.ShootRight;
-        }
-        else if (orders[orderNumber] == Orders.ShootRight)
-        {
-            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/ShootLeft");
-            orders[orderNumber] = Orders.ShootLeft;
-        }
-        else if (orders[orderNumber] == Orders.ShootLeft)
-        {
-            GameObject.Find("Order" + orderNumber).GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/Evade");
-            orders[orderNumber] = Orders.Evade;
-        }
+        return values;
     }
 }

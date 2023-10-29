@@ -1,12 +1,7 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.NetworkInformation;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
-using static GameManager;
+using UnityEngine.UIElements;
 
 public class ShipManager : MonoBehaviour
 {
@@ -17,15 +12,15 @@ public class ShipManager : MonoBehaviour
     internal HexCoords currentPos;
     private bool travelAround = true;
 
-    void Start()
+    public void CreateShip(HexCoords _currentPos)
     {
-        currentPos = new HexCoords(5, 5);
-        direction = HexDirection.TopLeft;
+        currentPos = _currentPos;
+        direction = (HexDirection)_currentPos.type;
     }
     internal IEnumerator Move()
     {
         int i = 0;
-        foreach (var nextOrder in GameManager.i.orders)
+        foreach (var nextOrder in GameManager.i.newOrders)
         {
             GameManager.i.orderButtons[i].interactable = false;
             i++;
@@ -41,20 +36,23 @@ public class ShipManager : MonoBehaviour
                         var speedMove = 1f;
                         travelAround = true;
                         HexCoords nextPosition = GetNextPosition();
-                        if (nextPosition.x >= 0 && nextPosition.x < 11 && nextPosition.y >= 0 && nextPosition.y < 11)
+                        if (!CheckForObstacles(nextPosition))
                         {
-                            var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
-                            if (nodeToMoveTo != null)
+                            if (nextPosition.x >= 0 && nextPosition.x < 11 && nextPosition.y >= 0 && nextPosition.y < 11)
                             {
-                                var realPosition = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
-                                var positionToMoveTo = travelAround ? transform.Find("Nose").transform.position : realPosition;
-                                while (positionToMoveTo != transform.position)
+                                var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
+                                if (nodeToMoveTo != null)
                                 {
-                                    transform.position = Vector3.MoveTowards(transform.position, positionToMoveTo, speedMove * Time.deltaTime);
-                                    yield return null;
+                                    var realPosition = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
+                                    var positionToMoveTo = travelAround ? transform.Find("Nose").transform.position : realPosition;
+                                    while (positionToMoveTo != transform.position)
+                                    {
+                                        transform.position = Vector3.MoveTowards(transform.position, positionToMoveTo, speedMove * Time.deltaTime);
+                                        yield return null;
+                                    }
+                                    transform.position = realPosition;
+                                    currentPos = nextPosition;
                                 }
-                                transform.position = realPosition;
-                                currentPos = nextPosition;
                             }
                         }
                         break;
@@ -95,6 +93,75 @@ public class ShipManager : MonoBehaviour
             yield return new WaitForSeconds(.5f);
         }
         GameManager.i.orderButtons.ForEach(x => x.interactable = true);
+    }
+
+    private bool CheckForObstacles(HexCoords nextPosition)
+    {
+        var firstCords = new List<HexCoords>() { 
+            new HexCoords(7, 0), //1
+            new HexCoords(5, 1), //2
+            new HexCoords(5, 2), //3
+            new HexCoords(5, 2), //4
+            new HexCoords(3, 4), //5
+            new HexCoords(1, 6), //6
+            new HexCoords(0, 8), //7
+            new HexCoords(2, 8), //8
+            new HexCoords(2, 8), //9
+            new HexCoords(5, 7), //10
+            new HexCoords(6, 7), //11
+            new HexCoords(6, 8), //12
+            new HexCoords(7, 6), //13
+            new HexCoords(8, 5), //14
+            new HexCoords(9, 4), //15
+            new HexCoords(10, 1),//16
+            new HexCoords(9, 1), //17
+            new HexCoords(8, 2), //18
+            new HexCoords(5, 4), //19
+            new HexCoords(6, 4), //20
+            new HexCoords(4, 6), //21
+            new HexCoords(5, 6), //22
+            new HexCoords(2, 9), //23
+            new HexCoords(5, 9), //24
+        };
+        var secondCords = new List<HexCoords>() { 
+            new HexCoords(6, 0), //1
+            new HexCoords(5, 2), //2
+            new HexCoords(4, 3), //3
+            new HexCoords(6, 1), //4
+            new HexCoords(2, 5), //5
+            new HexCoords(0, 6), //6
+            new HexCoords(0, 9), //7
+            new HexCoords(1, 9), //8
+            new HexCoords(1, 8), //9
+            new HexCoords(5, 8), //10
+            new HexCoords(5, 8), //11
+            new HexCoords(6, 9), //12
+            new HexCoords(8, 5), //13
+            new HexCoords(8, 4), //14
+            new HexCoords(10, 4),//15
+            new HexCoords(10, 2),//16
+            new HexCoords(8, 2), //17
+            new HexCoords(7, 3), //18
+            new HexCoords(5, 5), //19
+            new HexCoords(5, 5), //20
+            new HexCoords(5, 5), //21
+            new HexCoords(5, 5), //22
+            new HexCoords(2, 8), //23
+            new HexCoords(5, 8), //24
+        };
+        return DoesEitherEqual(currentPos, nextPosition, firstCords, secondCords);
+    }
+
+    private bool DoesEitherEqual(HexCoords currentPos, HexCoords nextPosition, List<HexCoords> hexCoords1, List<HexCoords> hexCoords2)
+    {
+        for (int i = 0; i < hexCoords1.Count; i++)
+        {
+            if ((currentPos.Compare(hexCoords1[i]) || currentPos.Compare(hexCoords2[i])) && (nextPosition.Compare(hexCoords1[i]) || nextPosition.Compare(hexCoords2[i])))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private HexCoords GetNextPosition()
