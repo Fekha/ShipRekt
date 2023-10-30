@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -10,51 +11,86 @@ using UnityEngine.UI;
 public class GameManager : MonoBehaviour
 {
     internal static GameManager i;
-    private ShipManager ship;
+    private List<ShipManager> ships = new List<ShipManager>();
     private GameObject circle;
     private GameObject OrderPanel;
+    private GameObject ViewButton;
     Transform HexCoordParent;
     internal List<Button> orderButtons = new List<Button>();
-    internal Orders[] newOrders;
-    internal Orders[] oldOrders;
+
     internal GameObject[,] mapNodes;
     private bool isBoardMaximized = true;
-    private Sprite Move;
-    private Sprite TurnRight;
-    private Sprite TurnLeft;
-    private Sprite ShootRight;
-    private Sprite ShootLeft;
-    private Sprite Evade;
+        
     public List<HexCoords> spawns = new List<HexCoords>();
-    private ShipManager shipPrefab;
+    private int playerTurn = 0;
+    private int numPlayers = 3;
+    private Sprite[] OrderSpirtes;
+    internal bool[] ShipsDone = new bool[3] { false, false, false };
     // Start is called before the first frame update
     void Start()
     {
         i = this;
-        newOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
-        oldOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
         spawns = new List<HexCoords>() { new HexCoords(2,5,0,4), new HexCoords(2,8,5,3), new HexCoords(5,8,4,2), new HexCoords(8,5,3,1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
-        Evade = Resources.Load<Sprite>("Sprites/Evade");
-        Move = Resources.Load<Sprite>("Sprites/Move");
-        TurnRight = Resources.Load<Sprite>("Sprites/TurnRight");
-        TurnLeft = Resources.Load<Sprite>("Sprites/TurnLeft");
-        ShootRight = Resources.Load<Sprite>("Sprites/ShootRight");
-        ShootLeft = Resources.Load<Sprite>("Sprites/ShootLeft");
+        OrderSpirtes = new Sprite[] { Resources.Load<Sprite>("Sprites/Evade"), Resources.Load<Sprite>("Sprites/Move"), Resources.Load<Sprite>("Sprites/TurnRight"), Resources.Load<Sprite>("Sprites/TurnLeft"), Resources.Load<Sprite>("Sprites/ShootRight"), Resources.Load<Sprite>("Sprites/ShootLeft") };
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
         OrderPanel = GameObject.Find("OrderPanel");
         circle = Resources.Load<GameObject>("Prefabs/Circle");
-        shipPrefab = Resources.Load<ShipManager>("Prefabs/Ship");
-
+        ViewButton = GameObject.Find("ViewButton");
         CreateUI();
         GenerateMapNodes();
-        var randomSpawn = spawns[UnityEngine.Random.Range(0, spawns.Count)];
-        ship = Instantiate(shipPrefab, GetShipCoords(mapNodes[randomSpawn.x, randomSpawn.y].transform.position), Quaternion.Euler(90, (randomSpawn.rotation * 60) % 360, 0));
-        ship.CreateShip(randomSpawn);
+        for (int i = 0; i < numPlayers; i++)
+        {
+            var randomSpawn = spawns[UnityEngine.Random.Range(0, spawns.Count)];
+            var ship = Instantiate(Resources.Load<ShipManager>("Prefabs/Ship"+i), GetShipCoords(mapNodes[randomSpawn.x, randomSpawn.y].transform.position), Quaternion.Euler(90, (randomSpawn.rotation * 60) % 360, 0));
+            ship.CreateShip(randomSpawn, i);
+            ships.Add(ship);
+            spawns.Remove(randomSpawn);
+        }
+        SetOrders();
     }
-    public void StartMatch()
+    public void EndTurn()
     {
-        StartCoroutine(ship.Move());
+        orderButtons.ForEach(x => x.transform.Find("Selected").gameObject.SetActive(false));
+        if (playerTurn < numPlayers-1)
+        {
+            playerTurn++;
+            SetOrders();
+        }
+        else
+        {
+            StartCoroutine(TakeOrders());
+        }
     }
+    
+    private IEnumerator TakeOrders()
+    {
+        playerTurn = 0;
+        OrderPanel.SetActive(false);
+        for (int i = 0; i < 6; i++)
+        {
+            foreach (var ship in ships)
+            {
+                StartCoroutine(ship.Move(i));
+            }
+            while (ShipsDone.Any(x => !x))
+            {
+                yield return null;
+            }
+            ShipsDone = new bool[3] { false, false, false };
+        }
+        SetOrders();
+        OrderPanel.SetActive(true);
+    }
+
+    private void SetOrders()
+    {
+        for (int i = 0; i < orderButtons.Count; i++)
+        {
+            orderButtons[i].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)ships[playerTurn].oldOrders[i]];
+            orderButtons[i].GetComponent<Image>().color = playerTurn == 0? Color.green : playerTurn == 1? Color.cyan : Color.magenta;
+        }
+    }
+
     public Vector3 GetShipCoords(Vector3 position)
     {
         return new Vector3(position.x, 0.1f, position.z);
@@ -103,53 +139,20 @@ public class GameManager : MonoBehaviour
     public void MaximizeBoard()
     {
         isBoardMaximized = !isBoardMaximized;
-        if (isBoardMaximized)
-        {
-            OrderPanel.GetComponent<RectTransform>().anchoredPosition = new Vector3(OrderPanel.GetComponent<RectTransform>().anchoredPosition.x, -246, 0);
-        }
-        else
-        {
-            OrderPanel.GetComponent<RectTransform>().anchoredPosition = new Vector3(OrderPanel.GetComponent<RectTransform>().anchoredPosition.x, -408.9674f, 0);
-        }
-        OrderPanel.transform.Find("MaximizeButton").Rotate(0, 0, 180);
+        OrderPanel.gameObject.SetActive(isBoardMaximized);
+        ViewButton.GetComponentInChildren<TextMeshProUGUI>().text = isBoardMaximized ? "Show All" : "Show Yours";
     }
     public void ChangeNumber(int orderNumber)
     {
-        var differences = FindDifferences(newOrders, oldOrders);
+        var currentShip = ships[playerTurn];
+        var differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
         if (differences.Count < 2 || differences.Contains(orderNumber))
         {
-            if (newOrders[orderNumber] == Orders.Evade)
-            {
-                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = Move;
-                newOrders[orderNumber] = Orders.Move;
-            }
-            else if (newOrders[orderNumber] == Orders.Move)
-            {
-                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = TurnRight;
-                newOrders[orderNumber] = Orders.TurnRight;
-            }
-            else if (newOrders[orderNumber] == Orders.TurnRight)
-            {
-                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = TurnLeft;
-                newOrders[orderNumber] = Orders.TurnLeft;
-            }
-            else if (newOrders[orderNumber] == Orders.TurnLeft)
-            {
-                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = ShootRight;
-                newOrders[orderNumber] = Orders.ShootRight;
-            }
-            else if (newOrders[orderNumber] == Orders.ShootRight)
-            {
-                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = ShootLeft;
-                newOrders[orderNumber] = Orders.ShootLeft;
-            }
-            else if (newOrders[orderNumber] == Orders.ShootLeft)
-            {
-                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = Evade;
-                newOrders[orderNumber] = Orders.Evade;
-            }
+            var newOrderInt = ((int)currentShip.newOrders[orderNumber] + 1) % 6;
+            orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[newOrderInt];
+            currentShip.newOrders[orderNumber] = (Orders)newOrderInt;
         }
-        differences = FindDifferences(newOrders, oldOrders);
+        differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
         for(int i = 0; i < 6; i++)
         {
             orderButtons[i].transform.Find("Selected").gameObject.SetActive(differences.Contains(i));
