@@ -16,6 +16,11 @@ public class ShipManager : MonoBehaviour
     internal Orders[] newOrders;
     internal Orders[] oldOrders;
     internal List<Treasure> booty = new List<Treasure>();
+    private GameObject CannonBall;
+    private float speedRot;
+    private float speedMove;
+    private GameObject explosionPrefab;
+
     public void CreateShip(HexCoords _currentPos, int _id)
     {
         id = _id;
@@ -23,11 +28,15 @@ public class ShipManager : MonoBehaviour
         direction = (HexDirection)_currentPos.type;
         newOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
         oldOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
+        CannonBall = Resources.Load<GameObject>("Prefabs/CannonBall");
+        speedRot = 100f;
+        speedMove = 1f;
+        explosionPrefab = Resources.Load<GameObject>("Prefabs/Explosion");
     }
     internal IEnumerator Move(int orderNum)
     {
         GameManager.i.ShipsDone[id] = false;
-        var speedRot = 100f;
+        
         var orderButton = GameObject.Find($"Player{id}").transform.Find($"Order{orderNum}Button");
         orderButton.GetComponent<Button>().interactable = false;
         switch (newOrders[orderNum])
@@ -38,24 +47,16 @@ public class ShipManager : MonoBehaviour
                 }
             case Orders.Move:
                 {
-                    var speedMove = 1f;
                     travelAround = true;
-                    HexCoords nextPosition = GetNextPosition();
-                    if (!WillHitObstical(nextPosition) && nextPosition.x >= 0 && nextPosition.x < 11 && nextPosition.y >= 0 && nextPosition.y < 11)
+                    HexCoords nextPosition = CheckTeleports(currentPos, direction);
+                    Vector3 positionToMoveTo = transform.Find("Nose").transform.position;
+                    if (nextPosition == null)
                     {
-                        var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
-                        if (nodeToMoveTo != null)
+                        nextPosition = GetNextPosition(currentPos, direction);
+                        if (nextPosition != null)
                         {
-                            var realPosition = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
-                            var positionToMoveTo = travelAround ? transform.Find("Nose").transform.position : realPosition;
-                            while (positionToMoveTo != transform.position)
-                            {
-                                transform.position = Vector3.MoveTowards(transform.position, positionToMoveTo, speedMove * Time.deltaTime);
-                                yield return null;
-                            }
-                            transform.position = realPosition;
-                            currentPos = nextPosition;
-                            CheckForTreasure(nextPosition);
+                            var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
+                            positionToMoveTo = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
                         }
                         else
                         {
@@ -63,10 +64,17 @@ public class ShipManager : MonoBehaviour
                             orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.Evade];
                         }
                     }
-                    else
+                    if (nextPosition != null)
                     {
-                        newOrders[orderNum] = Orders.Evade;
-                        orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.Evade];
+                        while (positionToMoveTo != transform.position)
+                        {
+                            transform.position = Vector3.MoveTowards(transform.position, positionToMoveTo, speedMove * Time.deltaTime);
+                            yield return null;
+                        }
+                        var nodeToMoveTo2 = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
+                        transform.position = new Vector3(nodeToMoveTo2.transform.position.x, .1f, nodeToMoveTo2.transform.position.z);
+                        currentPos = nextPosition;
+                        CheckForTreasure(nextPosition);
                     }
                     break;
                 }
@@ -96,8 +104,16 @@ public class ShipManager : MonoBehaviour
                 }
             case Orders.ShootRight:
             {
-                break;
-            }
+                    for (int i = 1; i <= 2; i++)
+                    {
+                        HexCoords nextPosition = GetNextPosition(currentPos, (HexDirection)(((int)direction + i) % 6)); 
+                        if (nextPosition != null)
+                        {
+                            StartCoroutine(ShootCannonBall(GameManager.i.mapNodes[nextPosition.x, nextPosition.y]));
+                        }
+                    }
+                    break;
+                }
             case Orders.ShootLeft:
             {
                 break;
@@ -110,6 +126,43 @@ public class ShipManager : MonoBehaviour
         }
         yield return new WaitForSeconds(.5f);
         GameManager.i.ShipsDone[id] = true;
+    }
+
+    private HexCoords GetNextPosition(HexCoords _currentPos, HexDirection _direction)
+    {
+        var nextPos = new HexCoords(_currentPos.x + HexDirections.directionMap[_direction].x, _currentPos.y + HexDirections.directionMap[_direction].y);
+        nextPos = CheckObsticals(_currentPos, nextPos);
+        nextPos = CheckOB(nextPos);
+        return nextPos;
+    }
+
+    private HexCoords CheckOB(HexCoords nextPos)
+    {
+        if (nextPos != null)
+        {
+            if (nextPos.x >= 0 && nextPos.x < 11 && nextPos.y >= 0 && nextPos.y < 11)
+            {
+                return nextPos;
+            }
+        }
+        return null;
+    }
+
+    private IEnumerator ShootCannonBall(GameObject nodeToMoveTo)
+    {
+        if (nodeToMoveTo != null)
+        {
+            var cannonBall = Instantiate(CannonBall);
+            cannonBall.transform.position = transform.position;
+            var positionToMoveTo = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
+            while (positionToMoveTo != cannonBall.transform.position)
+            {
+                cannonBall.transform.position = Vector3.MoveTowards(cannonBall.transform.position, positionToMoveTo, speedMove * Time.deltaTime);
+                yield return null;
+            }
+            Instantiate(explosionPrefab, cannonBall.transform.position, Quaternion.identity);
+            Destroy(cannonBall);
+        }
     }
 
     private void CheckForTreasure(HexCoords nextPosition)
@@ -140,7 +193,7 @@ public class ShipManager : MonoBehaviour
         }
     }
 
-    private bool WillHitObstical(HexCoords nextPosition)
+    private HexCoords CheckObsticals(HexCoords _currentPosition, HexCoords _nextPosition)
     {
         var firstCords = new List<HexCoords>() { 
             new HexCoords(7, 0), //1
@@ -192,116 +245,113 @@ public class ShipManager : MonoBehaviour
             new HexCoords(5, 5), //22
             new HexCoords(5, 8), //23
         };
-        return DoesEitherEqual(currentPos, nextPosition, firstCords, secondCords);
+        return DoesEitherEqual(_currentPosition, _nextPosition, firstCords, secondCords);
     }
 
-    private bool DoesEitherEqual(HexCoords currentPos, HexCoords nextPosition, List<HexCoords> hexCoords1, List<HexCoords> hexCoords2)
+    private HexCoords DoesEitherEqual(HexCoords _currentPos, HexCoords _nextPosition, List<HexCoords> hexCoords1, List<HexCoords> hexCoords2)
     {
         for (int i = 0; i < hexCoords1.Count; i++)
         {
-            if ((currentPos.Compare(hexCoords1[i]) || currentPos.Compare(hexCoords2[i])) && (nextPosition.Compare(hexCoords1[i]) || nextPosition.Compare(hexCoords2[i])))
+            if ((_currentPos.Compare(hexCoords1[i]) || _currentPos.Compare(hexCoords2[i])) && (_nextPosition.Compare(hexCoords1[i]) || _nextPosition.Compare(hexCoords2[i])))
             {
-                return true;
+                return null;
             }
         }
-        return false;
+        return _nextPosition;
     }
 
-    private HexCoords GetNextPosition()
+    private HexCoords CheckTeleports(HexCoords _currentPos, HexDirection _direction)
     {
-        if (currentPos.Compare(new HexCoords(8, 0)) && direction == HexDirection.TopLeft)
+        if (_currentPos.Compare(new HexCoords(8, 0)) && _direction == HexDirection.TopLeft)
         {
             return new HexCoords(0, 8);
         }
-        else if (currentPos.Compare(new HexCoords(0, 8)) && direction == HexDirection.BottomRight)
+        else if (_currentPos.Compare(new HexCoords(0, 8)) && _direction == HexDirection.BottomRight)
         {
             return new HexCoords(8, 0);
         }
-        else if (currentPos.Compare(new HexCoords(9, 1)) && direction == HexDirection.TopLeft)
+        else if (_currentPos.Compare(new HexCoords(9, 1)) && _direction == HexDirection.TopLeft)
         {
             return new HexCoords(1, 9);
         }
-        else if (currentPos.Compare(new HexCoords(1, 9)) && direction == HexDirection.BottomRight)
+        else if (_currentPos.Compare(new HexCoords(1, 9)) && _direction == HexDirection.BottomRight)
         {
             return new HexCoords(9, 1);
         }
-        else if (currentPos.Compare(new HexCoords(10, 2)) && direction == HexDirection.TopLeft)
+        else if (_currentPos.Compare(new HexCoords(10, 2)) && _direction == HexDirection.TopLeft)
         {
             return new HexCoords(2, 10);
         }
-        else if (currentPos.Compare(new HexCoords(2, 10)) && direction == HexDirection.BottomRight)
+        else if (_currentPos.Compare(new HexCoords(2, 10)) && _direction == HexDirection.BottomRight)
         {
             return new HexCoords(10, 2);
         }
-        else if (currentPos.Compare(new HexCoords(7, 0)) && direction == HexDirection.Left)
+        else if (_currentPos.Compare(new HexCoords(7, 0)) && _direction == HexDirection.Left)
         {
             return new HexCoords(7, 8);
         }
-        else if (currentPos.Compare(new HexCoords(7, 8)) && direction == HexDirection.Right)
+        else if (_currentPos.Compare(new HexCoords(7, 8)) && _direction == HexDirection.Right)
         {
             return new HexCoords(7, 0);
         }
-        else if (currentPos.Compare(new HexCoords(5, 1)) && direction == HexDirection.Left)
+        else if (_currentPos.Compare(new HexCoords(5, 1)) && _direction == HexDirection.Left)
         {
             return new HexCoords(5, 9);
         }
-        else if (currentPos.Compare(new HexCoords(5, 9)) && direction == HexDirection.Right)
+        else if (_currentPos.Compare(new HexCoords(5, 9)) && _direction == HexDirection.Right)
         {
             return new HexCoords(5, 1);
         }
-        else if (currentPos.Compare(new HexCoords(3, 2)) && direction == HexDirection.Left)
+        else if (_currentPos.Compare(new HexCoords(3, 2)) && _direction == HexDirection.Left)
         {
             return new HexCoords(3, 10);
         }
-        else if (currentPos.Compare(new HexCoords(3, 10)) && direction == HexDirection.Right)
+        else if (_currentPos.Compare(new HexCoords(3, 10)) && _direction == HexDirection.Right)
         {
             return new HexCoords(3, 2);
         } 
-        else if (currentPos.Compare(new HexCoords(2, 3)) && direction == HexDirection.BottomLeft)
+        else if (_currentPos.Compare(new HexCoords(2, 3)) && _direction == HexDirection.BottomLeft)
         {
             return new HexCoords(10, 3);
         }
-        else if (currentPos.Compare(new HexCoords(10, 3)) && direction == HexDirection.TopRight)
+        else if (_currentPos.Compare(new HexCoords(10, 3)) && _direction == HexDirection.TopRight)
         {
             return new HexCoords(2, 3);
         } 
-        else if (currentPos.Compare(new HexCoords(1, 5)) && direction == HexDirection.BottomLeft)
+        else if (_currentPos.Compare(new HexCoords(1, 5)) && _direction == HexDirection.BottomLeft)
         {
             return new HexCoords(9, 5);
         }
-        else if (currentPos.Compare(new HexCoords(9, 5)) && direction == HexDirection.TopRight)
+        else if (_currentPos.Compare(new HexCoords(9, 5)) && _direction == HexDirection.TopRight)
         {
             return new HexCoords(1, 5);
         } 
-        else if (currentPos.Compare(new HexCoords(0, 7)) && direction == HexDirection.BottomLeft)
+        else if (_currentPos.Compare(new HexCoords(0, 7)) && _direction == HexDirection.BottomLeft)
         {
             return new HexCoords(8, 7);
         }
-        else if (currentPos.Compare(new HexCoords(8, 7)) && direction == HexDirection.TopRight)
+        else if (_currentPos.Compare(new HexCoords(8, 7)) && _direction == HexDirection.TopRight)
         {
             return new HexCoords(0, 7);
         }
-        else if (currentPos.Compare(new HexCoords(9, 0)) && direction == HexDirection.BottomRight)
+        else if (_currentPos.Compare(new HexCoords(9, 0)) && _direction == HexDirection.BottomRight)
         {
             return new HexCoords(0, 9);
         }
-        else if (currentPos.Compare(new HexCoords(0, 9)) && direction == HexDirection.TopLeft)
+        else if (_currentPos.Compare(new HexCoords(0, 9)) && _direction == HexDirection.TopLeft)
         {
             return new HexCoords(9, 0);
         }
-        else if (currentPos.Compare(new HexCoords(6, 0)) && direction == HexDirection.Left)
+        else if (_currentPos.Compare(new HexCoords(6, 0)) && _direction == HexDirection.Left)
         {
             return new HexCoords(6, 9);
         }
-        else if (currentPos.Compare(new HexCoords(6, 9)) && direction == HexDirection.Right)
+        else if (_currentPos.Compare(new HexCoords(6, 9)) && _direction == HexDirection.Right)
         {
             return new HexCoords(6, 0);
         }
-        else
-        {
-            travelAround = false;
-            return new HexCoords(currentPos.x + HexDirections.directionMap[direction].x, currentPos.y + HexDirections.directionMap[direction].y);
-        }
+        travelAround = false;
+        return null;
     }
 }
 
