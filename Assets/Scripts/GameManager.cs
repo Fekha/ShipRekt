@@ -1,10 +1,7 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using TMPro;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,41 +9,45 @@ public class GameManager : MonoBehaviour
 {
     internal static GameManager i;
     private List<ShipManager> ships = new List<ShipManager>();
-    private GameObject circle;
+    private GameObject NodePrefab;
     private GameObject OrderPanel;
+    private GameObject Booty;
     private GameObject ViewButton;
+    public GameObject MainCanvas;
     Transform HexCoordParent;
     internal List<Button> orderButtons = new List<Button>();
 
     internal GameObject[,] mapNodes;
     private bool isBoardMaximized = true;
         
-    public List<HexCoords> spawns = new List<HexCoords>();
+    public List<HexCoords> Spawns = new List<HexCoords>();
     private int playerTurn = 0;
     private int numPlayers = 3;
-    private Sprite[] OrderSpirtes;
+    internal Sprite[] OrderSpirtes;
     internal bool[] ShipsDone = new bool[3] { false, false, false };
     // Start is called before the first frame update
     void Start()
     {
         i = this;
-        spawns = new List<HexCoords>() { new HexCoords(2,5,0,4), new HexCoords(2,8,5,3), new HexCoords(5,8,4,2), new HexCoords(8,5,3,1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
+        MainCanvas.SetActive(true);
+        Spawns = new List<HexCoords>() { new HexCoords(2,5,0,4), new HexCoords(2,8,5,3), new HexCoords(5,8,4,2), new HexCoords(8,5,3,1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
         OrderSpirtes = new Sprite[] { Resources.Load<Sprite>("Sprites/Evade"), Resources.Load<Sprite>("Sprites/Move"), Resources.Load<Sprite>("Sprites/TurnRight"), Resources.Load<Sprite>("Sprites/TurnLeft"), Resources.Load<Sprite>("Sprites/ShootRight"), Resources.Load<Sprite>("Sprites/ShootLeft") };
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
         OrderPanel = GameObject.Find("OrderPanel");
-        circle = Resources.Load<GameObject>("Prefabs/Circle");
+        Booty = GameObject.Find("Booty");
+        NodePrefab = Resources.Load<GameObject>("Prefabs/Circle");
         ViewButton = GameObject.Find("ViewButton");
         CreateUI();
         GenerateMapNodes();
         for (int i = 0; i < numPlayers; i++)
         {
-            var randomSpawn = spawns[UnityEngine.Random.Range(0, spawns.Count)];
+            var randomSpawn = Spawns[UnityEngine.Random.Range(0, Spawns.Count)];
             var ship = Instantiate(Resources.Load<ShipManager>("Prefabs/Ship"+i), GetShipCoords(mapNodes[randomSpawn.x, randomSpawn.y].transform.position), Quaternion.Euler(90, (randomSpawn.rotation * 60) % 360, 0));
             ship.CreateShip(randomSpawn, i);
             ships.Add(ship);
-            spawns.Remove(randomSpawn);
+            Spawns.Remove(randomSpawn);
         }
-        SetOrders();
+        SetBoard();
     }
     public void EndTurn()
     {
@@ -54,7 +55,7 @@ public class GameManager : MonoBehaviour
         if (playerTurn < numPlayers-1)
         {
             playerTurn++;
-            SetOrders();
+            SetBoard();
         }
         else
         {
@@ -65,6 +66,7 @@ public class GameManager : MonoBehaviour
     private IEnumerator TakeOrders()
     {
         playerTurn = 0;
+        SetAllPlayersOrders();
         OrderPanel.SetActive(false);
         for (int i = 0; i < 6; i++)
         {
@@ -78,16 +80,42 @@ public class GameManager : MonoBehaviour
             }
             ShipsDone = new bool[3] { false, false, false };
         }
-        SetOrders();
+        SetAllPlayersOrders();
+        SetBoard();
         OrderPanel.SetActive(true);
     }
 
-    private void SetOrders()
+    private void SetBoard()
     {
         for (int i = 0; i < orderButtons.Count; i++)
         {
             orderButtons[i].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)ships[playerTurn].oldOrders[i]];
             orderButtons[i].GetComponent<Image>().color = playerTurn == 0? Color.green : playerTurn == 1? Color.cyan : Color.magenta;
+            var bootyObj = Booty.transform.Find($"Booty{i}");
+            if (ships[playerTurn].booty.Count > i)
+            {
+                bootyObj.gameObject.SetActive(true);
+                bootyObj.GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{i}");
+            }
+            else
+            {
+                bootyObj.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void SetAllPlayersOrders()
+    {
+        for (int i = 0; i < numPlayers; i++)
+        {
+            var playerOrders = GameObject.Find($"Player{i}");
+            for (int j = 0; j < 6; j++)
+            {
+                var orderButton = playerOrders.transform.Find($"Order{j}Button");
+                orderButton.GetComponent<Button>().interactable = true;
+                orderButton.transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)ships[i].newOrders[j]];
+                orderButton.GetComponent<Image>().color = i == 0 ? Color.green : i == 1 ? Color.cyan : Color.magenta;
+            }
         }
     }
 
@@ -97,12 +125,12 @@ public class GameManager : MonoBehaviour
     }
     private void CreateUI()
     {
-        orderButtons.Add(GameObject.Find("Order0Button").GetComponent<Button>());
-        orderButtons.Add(GameObject.Find("Order1Button").GetComponent<Button>());
-        orderButtons.Add(GameObject.Find("Order2Button").GetComponent<Button>());
-        orderButtons.Add(GameObject.Find("Order3Button").GetComponent<Button>());
-        orderButtons.Add(GameObject.Find("Order4Button").GetComponent<Button>());
-        orderButtons.Add(GameObject.Find("Order5Button").GetComponent<Button>());
+        orderButtons.Add(OrderPanel.transform.Find("Order0Button").GetComponent<Button>());
+        orderButtons.Add(OrderPanel.transform.Find("Order1Button").GetComponent<Button>());
+        orderButtons.Add(OrderPanel.transform.Find("Order2Button").GetComponent<Button>());
+        orderButtons.Add(OrderPanel.transform.Find("Order3Button").GetComponent<Button>());
+        orderButtons.Add(OrderPanel.transform.Find("Order4Button").GetComponent<Button>());
+        orderButtons.Add(OrderPanel.transform.Find("Order5Button").GetComponent<Button>());
     }
     private void GenerateMapNodes()
     {
@@ -126,7 +154,7 @@ public class GameManager : MonoBehaviour
                     float scale = 1.73f;
                     float x = (1.732f * (j + 0.5f * i) / scale) - 7.51f;
                     float z = (1.5f * i / scale) - 4.33f;
-                    var newHex = Instantiate(circle, new Vector3(x, 0, z), Quaternion.identity, HexCoordParent);
+                    var newHex = Instantiate(NodePrefab, new Vector3(x, 0, z), Quaternion.identity, HexCoordParent);
                     newHex.name = $"Hex {i},{j}";
                     if(newHex.GetComponentInChildren<TextMeshPro>() != null)
                         newHex.GetComponentInChildren<TextMeshPro>().text = $"{i},{j}";

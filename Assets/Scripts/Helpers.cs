@@ -17,3 +17,15 @@ public enum Orders
     ShootRight,
     ShootLeft
 }
+public enum Treasure
+{
+    Earring,
+    Ring,
+    Goblet,
+    Crown,
+    Necklace,
+    Coins,
+    GreenDie,
+    PinkDie,
+    BlueDie
+}

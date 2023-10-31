@@ -1,7 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.UI;
 
 public class ShipManager : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class ShipManager : MonoBehaviour
     private bool travelAround = true;
     internal Orders[] newOrders;
     internal Orders[] oldOrders;
+    internal List<Treasure> booty = new List<Treasure>();
     public void CreateShip(HexCoords _currentPos, int _id)
     {
         id = _id;
@@ -26,6 +28,8 @@ public class ShipManager : MonoBehaviour
     {
         GameManager.i.ShipsDone[id] = false;
         var speedRot = 100f;
+        var orderButton = GameObject.Find($"Player{id}").transform.Find($"Order{orderNum}Button");
+        orderButton.GetComponent<Button>().interactable = false;
         switch (newOrders[orderNum])
         {
             case Orders.Evade:
@@ -51,15 +55,18 @@ public class ShipManager : MonoBehaviour
                             }
                             transform.position = realPosition;
                             currentPos = nextPosition;
+                            CheckForTreasure(nextPosition);
                         }
                         else
                         {
                             newOrders[orderNum] = Orders.Evade;
+                            orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.Evade];
                         }
                     }
                     else
                     {
                         newOrders[orderNum] = Orders.Evade;
+                        orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.Evade];
                     }
                     break;
                 }
@@ -95,12 +102,42 @@ public class ShipManager : MonoBehaviour
             {
                 break;
             }
+
         }
         for (int i = 0; i < newOrders.Length; i++)
         {
             oldOrders[i] = newOrders[i];
         }
+        yield return new WaitForSeconds(.5f);
         GameManager.i.ShipsDone[id] = true;
+    }
+
+    private void CheckForTreasure(HexCoords nextPosition)
+    {
+        if (nextPosition.Compare(new HexCoords(2, 5)) && !booty.Contains(Treasure.Earring))
+        {
+            booty.Add(Treasure.Earring);
+        }
+        else if (nextPosition.Compare(new HexCoords(2, 8)) && !booty.Contains(Treasure.Necklace))
+        {
+            booty.Add(Treasure.Necklace);
+        }
+        else if (nextPosition.Compare(new HexCoords(5, 8)) && !booty.Contains(Treasure.Goblet))
+        {
+            booty.Add(Treasure.Goblet);
+        }
+        else if (nextPosition.Compare(new HexCoords(8, 5)) && !booty.Contains(Treasure.Ring))
+        {
+            booty.Add(Treasure.Ring);
+        }
+        else if (nextPosition.Compare(new HexCoords(8, 2)) && !booty.Contains(Treasure.Coins))
+        {
+            booty.Add(Treasure.Coins);
+        }
+        else if (nextPosition.Compare(new HexCoords(5, 2)) && !booty.Contains(Treasure.Crown))
+        {
+            booty.Add(Treasure.Crown);
+        }
     }
 
     private bool WillHitObstical(HexCoords nextPosition)
