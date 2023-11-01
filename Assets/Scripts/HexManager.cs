@@ -15,7 +15,7 @@ public class HexCoords
     public int rotation;
     public bool Compare(HexCoords newCoords)
     {
-        return newCoords.x == x && newCoords.y == y;
+        return newCoords != null && newCoords.x == x && newCoords.y == y;
     }
 }
 

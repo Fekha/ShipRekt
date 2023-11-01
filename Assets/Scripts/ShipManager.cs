@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,34 +10,35 @@ public class ShipManager : MonoBehaviour
     public int directionNum;
     public int x;
     public int y;
-    int id;
+    internal int id;
     internal HexDirection direction;
-    internal HexCoords currentPos;
-    private bool travelAround = true;
+    internal HexCoords currentPosition;
+    private bool[] cannonsFinished = new bool[2] { false, false };
     internal Orders[] newOrders;
     internal Orders[] oldOrders;
     internal List<Treasure> booty = new List<Treasure>();
     private GameObject CannonBall;
     private float speedRot;
     private float speedMove;
+    private float speedCannon;
     private GameObject explosionPrefab;
 
     public void CreateShip(HexCoords _currentPos, int _id)
     {
         id = _id;
-        currentPos = _currentPos;
+        currentPosition = _currentPos;
         direction = (HexDirection)_currentPos.type;
         newOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
         oldOrders = new Orders[] { Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade, Orders.Evade };
         CannonBall = Resources.Load<GameObject>("Prefabs/CannonBall");
         speedRot = 100f;
         speedMove = 1f;
+        speedCannon = 2f;
         explosionPrefab = Resources.Load<GameObject>("Prefabs/Explosion");
     }
     internal IEnumerator Move(int orderNum)
     {
         GameManager.i.ShipsDone[id] = false;
-        
         var orderButton = GameObject.Find($"Player{id}").transform.Find($"Order{orderNum}Button");
         orderButton.GetComponent<Button>().interactable = false;
         switch (newOrders[orderNum])
@@ -47,18 +49,12 @@ public class ShipManager : MonoBehaviour
                 }
             case Orders.Move:
                 {
-                    travelAround = true;
-                    HexCoords nextPosition = CheckTeleports(currentPos, direction);
-                    Vector3 positionToMoveTo = transform.Find("Nose").transform.position;
-                    if (nextPosition == null)
+                    HexCoords nextPosition = GetNextPosition(currentPosition, direction);
+                    var teleporting = nextPosition == null;
+                    if (teleporting)
                     {
-                        nextPosition = GetNextPosition(currentPos, direction);
-                        if (nextPosition != null)
-                        {
-                            var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
-                            positionToMoveTo = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
-                        }
-                        else
+                        nextPosition = CheckTeleports(currentPosition, direction);
+                        if (nextPosition == null)
                         {
                             newOrders[orderNum] = Orders.Evade;
                             orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.Evade];
@@ -66,14 +62,16 @@ public class ShipManager : MonoBehaviour
                     }
                     if (nextPosition != null)
                     {
+                        var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
+                        var positionToEndAt = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
+                        var positionToMoveTo = teleporting ? transform.Find("Nose").transform.position : positionToEndAt;
                         while (positionToMoveTo != transform.position)
                         {
                             transform.position = Vector3.MoveTowards(transform.position, positionToMoveTo, speedMove * Time.deltaTime);
                             yield return null;
                         }
-                        var nodeToMoveTo2 = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
-                        transform.position = new Vector3(nodeToMoveTo2.transform.position.x, .1f, nodeToMoveTo2.transform.position.z);
-                        currentPos = nextPosition;
+                        transform.position = positionToEndAt;
+                        currentPosition = nextPosition;
                         CheckForTreasure(nextPosition);
                     }
                     break;
@@ -86,7 +84,6 @@ public class ShipManager : MonoBehaviour
                     {
                         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotPos, speedRot * Time.deltaTime);
                         yield return null;
-
                     }
                     break;
                 }
@@ -98,27 +95,39 @@ public class ShipManager : MonoBehaviour
                     {
                         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotNeg, speedRot * Time.deltaTime);
                         yield return null;
-
                     }
                     break;
                 }
             case Orders.ShootRight:
             {
-                    for (int i = 1; i <= 2; i++)
-                    {
-                        HexCoords nextPosition = GetNextPosition(currentPos, (HexDirection)(((int)direction + i) % 6)); 
-                        if (nextPosition != null)
-                        {
-                            StartCoroutine(ShootCannonBall(GameManager.i.mapNodes[nextPosition.x, nextPosition.y]));
-                        }
-                    }
-                    break;
+                cannonsFinished = new bool[2] { false, false };
+                for (int i = 1; i <= 2; i++)
+                {
+                    StartCoroutine(ShootCannonBall((HexDirection)(((int)direction + i) % 6),i-1, orderNum));
                 }
+                while(!cannonsFinished[0] || !cannonsFinished[1])
+                {
+                    yield return null;
+                }
+                break;
+            }
             case Orders.ShootLeft:
+            {
+                cannonsFinished = new bool[2] { false, false };
+                for (int i = 1; i <= 2; i++)
+                {
+                    StartCoroutine(ShootCannonBall((HexDirection)(((int)direction - i) < 0 ? (6 + (int)direction - i) : ((int)direction - i)),i-1, orderNum));
+                }
+                while (!cannonsFinished[0] || !cannonsFinished[1])
+                {
+                    yield return null;
+                }
+                break;
+            }
+            case Orders.None:
             {
                 break;
             }
-
         }
         for (int i = 0; i < newOrders.Length; i++)
         {
@@ -128,11 +137,52 @@ public class ShipManager : MonoBehaviour
         GameManager.i.ShipsDone[id] = true;
     }
 
+    private IEnumerator ShootCannonBall(HexDirection hexDirection, int i, int orderNum)
+    {
+        var cannonballPos = currentPosition;
+        for (int j = 0; j < 3; j++)
+        {
+            HexCoords nextPosition = GetNextPosition(cannonballPos, hexDirection);
+            var teleporting = nextPosition == null;
+            if (teleporting)
+            {
+                nextPosition = CheckTeleports(cannonballPos, hexDirection);
+            }
+            var hitShip = GameManager.i.Ships.FirstOrDefault(i => i.currentPosition.Compare(nextPosition) && i.newOrders[orderNum] != Orders.Evade);
+            if (hitShip)
+            {
+                j = 2; //tells animation to stop
+                for (int k = hitShip.newOrders.Length-1; k >= 0 ; k--)
+                {
+                    if(hitShip.newOrders[k] != Orders.None)
+                    {
+                        hitShip.newOrders[k] = Orders.None;
+                        GameObject.Find($"Player{hitShip.id}").transform.Find($"Order{k}Button").transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.None];
+                        break;
+                    }
+                }
+                booty.Add(hitShip.id == 0 ? Treasure.GreenDie: hitShip.id == 1 ? Treasure.BlueDie : Treasure.PinkDie);
+            }
+            yield return StartCoroutine(AnimateCannonBall(cannonballPos, nextPosition, j, teleporting));
+            if (nextPosition == null)
+            {
+                break;
+            }
+            else
+            {
+                cannonballPos = nextPosition;
+            }
+        }
+        cannonsFinished[i] = true;
+    }
+
     private HexCoords GetNextPosition(HexCoords _currentPos, HexDirection _direction)
     {
         var nextPos = new HexCoords(_currentPos.x + HexDirections.directionMap[_direction].x, _currentPos.y + HexDirections.directionMap[_direction].y);
         nextPos = CheckObsticals(_currentPos, nextPos);
         nextPos = CheckOB(nextPos);
+        if(nextPos == null || GameManager.i.mapNodes[nextPos.x, nextPos.y] == null)
+            return null;
         return nextPos;
     }
 
@@ -148,20 +198,39 @@ public class ShipManager : MonoBehaviour
         return null;
     }
 
-    private IEnumerator ShootCannonBall(GameObject nodeToMoveTo)
+    private IEnumerator AnimateCannonBall(HexCoords currPosition, HexCoords nextPosition, int j, bool teleporting)
     {
-        if (nodeToMoveTo != null)
+        var currentNode = GameManager.i.mapNodes[currPosition.x, currPosition.y].transform.position;
+        if (nextPosition != null)
         {
             var cannonBall = Instantiate(CannonBall);
-            cannonBall.transform.position = transform.position;
-            var positionToMoveTo = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
-            while (positionToMoveTo != cannonBall.transform.position)
+            var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
+            if (nodeToMoveTo != null)
             {
-                cannonBall.transform.position = Vector3.MoveTowards(cannonBall.transform.position, positionToMoveTo, speedMove * Time.deltaTime);
-                yield return null;
+                var nodeToMoveToPos = nodeToMoveTo.transform.position;
+                cannonBall.transform.position = currentNode;
+                var positionToMoveTo = new Vector3(nodeToMoveToPos.x, .1f, nodeToMoveToPos.z);
+                while (positionToMoveTo != cannonBall.transform.position && !teleporting)
+                {
+                    cannonBall.transform.position = Vector3.MoveTowards(cannonBall.transform.position, positionToMoveTo, speedCannon * Time.deltaTime);
+                    yield return null;
+                }
+                cannonBall.transform.position = positionToMoveTo;
+                if (j == 2)
+                {
+                    Instantiate(explosionPrefab, nodeToMoveToPos, Quaternion.identity);
+                }
             }
-            Instantiate(explosionPrefab, cannonBall.transform.position, Quaternion.identity);
-            Destroy(cannonBall);
+            else
+            {
+                Instantiate(explosionPrefab, currentNode, Quaternion.identity);
+            }
+            Destroy(cannonBall); 
+        }
+        else
+        {
+            if(j != 0)
+                Instantiate(explosionPrefab, currentNode, Quaternion.identity);
         }
     }
 
@@ -207,7 +276,7 @@ public class ShipManager : MonoBehaviour
             new HexCoords(2, 8), //9
             new HexCoords(5, 7), //10
             new HexCoords(6, 7), //11
-            new HexCoords(6, 8), //12
+            new HexCoords(5, 9), //12
             new HexCoords(7, 6), //13
             new HexCoords(8, 5), //14
             new HexCoords(9, 4), //15
@@ -334,11 +403,11 @@ public class ShipManager : MonoBehaviour
         {
             return new HexCoords(0, 7);
         }
-        else if (_currentPos.Compare(new HexCoords(9, 0)) && _direction == HexDirection.BottomRight)
+        else if (_currentPos.Compare(new HexCoords(9, 0)) && _direction == HexDirection.TopLeft)
         {
             return new HexCoords(0, 9);
         }
-        else if (_currentPos.Compare(new HexCoords(0, 9)) && _direction == HexDirection.TopLeft)
+        else if (_currentPos.Compare(new HexCoords(0, 9)) && _direction == HexDirection.BottomRight)
         {
             return new HexCoords(9, 0);
         }
@@ -350,7 +419,6 @@ public class ShipManager : MonoBehaviour
         {
             return new HexCoords(6, 0);
         }
-        travelAround = false;
         return null;
     }
 }

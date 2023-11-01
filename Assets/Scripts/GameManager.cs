@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public class GameManager : MonoBehaviour
 {
     internal static GameManager i;
-    private List<ShipManager> ships = new List<ShipManager>();
+    internal List<ShipManager> Ships = new List<ShipManager>();
     private GameObject NodePrefab;
     private GameObject OrderPanel;
     private GameObject Booty;
@@ -16,10 +16,8 @@ public class GameManager : MonoBehaviour
     public GameObject MainCanvas;
     Transform HexCoordParent;
     internal List<Button> orderButtons = new List<Button>();
-
     internal GameObject[,] mapNodes;
     private bool isBoardMaximized = true;
-        
     public List<HexCoords> Spawns = new List<HexCoords>();
     private int playerTurn = 0;
     private int numPlayers = 3;
@@ -31,7 +29,7 @@ public class GameManager : MonoBehaviour
         i = this;
         MainCanvas.SetActive(true);
         Spawns = new List<HexCoords>() { new HexCoords(2,5,0,4), new HexCoords(2,8,5,3), new HexCoords(5,8,4,2), new HexCoords(8,5,3,1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
-        OrderSpirtes = new Sprite[] { Resources.Load<Sprite>("Sprites/Evade"), Resources.Load<Sprite>("Sprites/Move"), Resources.Load<Sprite>("Sprites/TurnRight"), Resources.Load<Sprite>("Sprites/TurnLeft"), Resources.Load<Sprite>("Sprites/ShootRight"), Resources.Load<Sprite>("Sprites/ShootLeft") };
+        OrderSpirtes = new Sprite[] { Resources.Load<Sprite>("Sprites/Evade"), Resources.Load<Sprite>("Sprites/Move"), Resources.Load<Sprite>("Sprites/TurnLeft"), Resources.Load<Sprite>("Sprites/TurnRight"), Resources.Load<Sprite>("Sprites/ShootLeft"), Resources.Load<Sprite>("Sprites/ShootRight"), Resources.Load<Sprite>("Sprites/None") };
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
         OrderPanel = GameObject.Find("OrderPanel");
         Booty = GameObject.Find("Booty");
@@ -44,7 +42,7 @@ public class GameManager : MonoBehaviour
             var randomSpawn = Spawns[UnityEngine.Random.Range(0, Spawns.Count)];
             var ship = Instantiate(Resources.Load<ShipManager>("Prefabs/Ship"+i), GetShipCoords(mapNodes[randomSpawn.x, randomSpawn.y].transform.position), Quaternion.Euler(90, (randomSpawn.rotation * 60) % 360, 0));
             ship.CreateShip(randomSpawn, i);
-            ships.Add(ship);
+            Ships.Add(ship);
             Spawns.Remove(randomSpawn);
         }
         SetBoard();
@@ -70,7 +68,16 @@ public class GameManager : MonoBehaviour
         OrderPanel.SetActive(false);
         for (int i = 0; i < 6; i++)
         {
-            foreach (var ship in ships)
+            var ShipsToMove = Ships.Where(x => x.newOrders[i] == Orders.Move).ToList();
+            foreach (var ship in ShipsToMove)
+            {
+                StartCoroutine(ship.Move(i));
+            }
+            while (ShipsToMove.Any(x => !ShipsDone[x.id]))
+            {
+                yield return null;
+            }
+            foreach (var ship in Ships.Where(x => x.newOrders[i] != Orders.Move))
             {
                 StartCoroutine(ship.Move(i));
             }
@@ -89,13 +96,13 @@ public class GameManager : MonoBehaviour
     {
         for (int i = 0; i < orderButtons.Count; i++)
         {
-            orderButtons[i].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)ships[playerTurn].oldOrders[i]];
+            orderButtons[i].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)Ships[playerTurn].oldOrders[i]];
             orderButtons[i].GetComponent<Image>().color = playerTurn == 0? Color.green : playerTurn == 1? Color.cyan : Color.magenta;
             var bootyObj = Booty.transform.Find($"Booty{i}");
-            if (ships[playerTurn].booty.Count > i)
+            if (Ships[playerTurn].booty.Count > i)
             {
                 bootyObj.gameObject.SetActive(true);
-                bootyObj.GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{i}");
+                bootyObj.GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{(int)Ships[playerTurn].booty[i]}");
             }
             else
             {
@@ -113,7 +120,7 @@ public class GameManager : MonoBehaviour
             {
                 var orderButton = playerOrders.transform.Find($"Order{j}Button");
                 orderButton.GetComponent<Button>().interactable = true;
-                orderButton.transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)ships[i].newOrders[j]];
+                orderButton.transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)Ships[i].newOrders[j]];
                 orderButton.GetComponent<Image>().color = i == 0 ? Color.green : i == 1 ? Color.cyan : Color.magenta;
             }
         }
@@ -172,18 +179,21 @@ public class GameManager : MonoBehaviour
     }
     public void ChangeNumber(int orderNumber)
     {
-        var currentShip = ships[playerTurn];
-        var differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
-        if (differences.Count < 2 || differences.Contains(orderNumber))
+        var currentShip = Ships[playerTurn];
+        if (currentShip.newOrders[orderNumber] != Orders.None)
         {
-            var newOrderInt = ((int)currentShip.newOrders[orderNumber] + 1) % 6;
-            orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[newOrderInt];
-            currentShip.newOrders[orderNumber] = (Orders)newOrderInt;
-        }
-        differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
-        for(int i = 0; i < 6; i++)
-        {
-            orderButtons[i].transform.Find("Selected").gameObject.SetActive(differences.Contains(i));
+            var differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
+            if (differences.Count < 2 || differences.Contains(orderNumber))
+            {
+                var newOrderInt = ((int)currentShip.newOrders[orderNumber] + 1) % 6;
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[newOrderInt];
+                currentShip.newOrders[orderNumber] = (Orders)newOrderInt;
+            }
+            differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
+            for (int i = 0; i < 6; i++)
+            {
+                orderButtons[i].transform.Find("Selected").gameObject.SetActive(differences.Contains(i));
+            }
         }
     }
 

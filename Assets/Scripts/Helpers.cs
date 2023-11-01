@@ -12,10 +12,11 @@ public enum Orders
 {
     Evade,
     Move,
-    TurnRight,
     TurnLeft,
+    TurnRight,
+    ShootLeft,
     ShootRight,
-    ShootLeft
+    None,
 }
 public enum Treasure
 {
