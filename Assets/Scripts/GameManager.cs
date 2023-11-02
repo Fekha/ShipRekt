@@ -30,7 +30,7 @@ public class GameManager : MonoBehaviour
         ShipsDone = new bool[numPlayers];
         ShipsDone.Select(x => false).ToArray();
         MainCanvas.SetActive(true);
-        Spawns = new List<HexCoords>() { new HexCoords(2,5,0,4), new HexCoords(2,8,5,3), new HexCoords(5,8,4,2), new HexCoords(8,5,3,1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
+        Spawns = new List<HexCoords>() { new HexCoords(2, 5, 0, 4), new HexCoords(2, 8, 5, 3), new HexCoords(5, 8, 4, 2), new HexCoords(8, 5, 3, 1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
         OrderSpirtes = new Sprite[] { Resources.Load<Sprite>("Sprites/Evade"), Resources.Load<Sprite>("Sprites/Move"), Resources.Load<Sprite>("Sprites/TurnLeft"), Resources.Load<Sprite>("Sprites/TurnRight"), Resources.Load<Sprite>("Sprites/ShootLeft"), Resources.Load<Sprite>("Sprites/ShootRight"), Resources.Load<Sprite>("Sprites/None") };
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
         OrderPanel = GameObject.Find("OrderPanel");
@@ -69,6 +69,7 @@ public class GameManager : MonoBehaviour
         playerTurn = 0;
         SetAllPlayersOrders();
         OrderPanel.SetActive(false);
+        ViewButton.SetActive(false);
         for (int i = 0; i < 6; i++)
         {
             var ShipsToMove = Ships.Where(x => x.newOrders[i] == Orders.Move).ToList();
@@ -92,30 +93,6 @@ public class GameManager : MonoBehaviour
         }
         for(int i = 0; i < Ships.Count; i++)
         {
-            for (int j = 0; j < Ships[i].newOrders.Count(); j++)
-            {
-                if (Ships[i].newOrders[j] == Orders.None)
-                {
-                    int bootyIndex = -1;
-                    if (Ships[i].booty.Contains(Treasure.GreenDie))
-                    {
-                        bootyIndex = Ships[i].booty.ToList().IndexOf(Treasure.GreenDie);
-                    }
-                    else if (Ships[i].booty.Contains(Treasure.BlueDie))
-                    {
-                        bootyIndex = Ships[i].booty.ToList().IndexOf(Treasure.BlueDie);
-                    }
-                    else if (Ships[i].booty.Contains(Treasure.PinkDie))
-                    {
-                        bootyIndex = Ships[i].booty.ToList().IndexOf(Treasure.PinkDie);
-                    }
-                    if (bootyIndex != -1)
-                    {
-                        Ships[i].booty[bootyIndex] = Treasure.None;
-                        Ships[i].newOrders[Ships[i].newOrders.ToList().IndexOf(Orders.None)] = Orders.Evade;
-                    }
-                }
-            }
             if (Ships[i].newOrders.All(x => x == Orders.None))
             {
                 MainCanvas.transform.Find($"Player{Ships[i].id}").gameObject.SetActive(false);
@@ -132,7 +109,36 @@ public class GameManager : MonoBehaviour
             SetAllPlayersOrders();
             SetBoard();
             OrderPanel.SetActive(true);
+            ViewButton.SetActive(true);
         }
+    }
+
+    private IEnumerator CheckForHeals(ShipManager ship)
+    {
+        for (int j = 0; j < ship.newOrders.Count(); j++)
+        {
+            if (ship.newOrders[j] == Orders.None)
+            {
+                int bootyIndex = -1;
+                if (ship.booty.Contains(Treasure.GreenDie))
+                {
+                    bootyIndex = ship.booty.ToList().IndexOf(Treasure.GreenDie);
+                }
+                else if (ship.booty.Contains(Treasure.BlueDie))
+                {
+                    bootyIndex = ship.booty.ToList().IndexOf(Treasure.BlueDie);
+                }
+                else if (ship.booty.Contains(Treasure.PinkDie))
+                {
+                    bootyIndex = ship.booty.ToList().IndexOf(Treasure.PinkDie);
+                }
+                if (bootyIndex != -1)
+                {
+                    yield return StartCoroutine(ship.Heal(bootyIndex));
+                }
+            }
+        }
+        ShipsDone[ship.id] = true;
     }
 
     private void SetBoard()
