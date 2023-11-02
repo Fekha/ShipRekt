@@ -16,7 +16,7 @@ public class ShipManager : MonoBehaviour
     private bool[] cannonsFinished = new bool[2] { false, false };
     internal Orders[] newOrders;
     internal Orders[] oldOrders;
-    internal List<Treasure> booty = new List<Treasure>();
+    internal Treasure[] booty = new Treasure[6] { Treasure.None, Treasure.None, Treasure.None, Treasure.None, Treasure.None, Treasure.None };
     private GameObject CannonBall;
     private float speedRot;
     private float speedMove;
@@ -129,10 +129,6 @@ public class ShipManager : MonoBehaviour
                 break;
             }
         }
-        for (int i = 0; i < newOrders.Length; i++)
-        {
-            oldOrders[i] = newOrders[i];
-        }
         yield return new WaitForSeconds(.5f);
         GameManager.i.ShipsDone[id] = true;
     }
@@ -161,7 +157,7 @@ public class ShipManager : MonoBehaviour
                         break;
                     }
                 }
-                booty.Add(hitShip.id == 0 ? Treasure.GreenDie: hitShip.id == 1 ? Treasure.BlueDie : Treasure.PinkDie);
+                AddBooty(hitShip.id == 0 ? Treasure.GreenDie : hitShip.id == 1 ? Treasure.BlueDie : Treasure.PinkDie);
             }
             yield return StartCoroutine(AnimateCannonBall(cannonballPos, nextPosition, j, teleporting));
             if (nextPosition == null)
@@ -174,6 +170,18 @@ public class ShipManager : MonoBehaviour
             }
         }
         cannonsFinished[i] = true;
+    }
+
+    private void AddBooty(Treasure treasure)
+    {
+        for (int k = 0; k < 6; k++)
+        {
+            if (booty[k] == Treasure.None)
+            {
+                booty[k] = treasure;
+                break;
+            }
+        }
     }
 
     private HexCoords GetNextPosition(HexCoords _currentPos, HexDirection _direction)
@@ -238,27 +246,27 @@ public class ShipManager : MonoBehaviour
     {
         if (nextPosition.Compare(new HexCoords(2, 5)) && !booty.Contains(Treasure.Earring))
         {
-            booty.Add(Treasure.Earring);
+            AddBooty(Treasure.Earring);
         }
         else if (nextPosition.Compare(new HexCoords(2, 8)) && !booty.Contains(Treasure.Necklace))
         {
-            booty.Add(Treasure.Necklace);
+            AddBooty(Treasure.Necklace);
         }
         else if (nextPosition.Compare(new HexCoords(5, 8)) && !booty.Contains(Treasure.Goblet))
         {
-            booty.Add(Treasure.Goblet);
+            AddBooty(Treasure.Goblet);
         }
         else if (nextPosition.Compare(new HexCoords(8, 5)) && !booty.Contains(Treasure.Ring))
         {
-            booty.Add(Treasure.Ring);
+            AddBooty(Treasure.Ring);
         }
         else if (nextPosition.Compare(new HexCoords(8, 2)) && !booty.Contains(Treasure.Coins))
         {
-            booty.Add(Treasure.Coins);
+            AddBooty(Treasure.Coins);
         }
         else if (nextPosition.Compare(new HexCoords(5, 2)) && !booty.Contains(Treasure.Crown))
         {
-            booty.Add(Treasure.Crown);
+            AddBooty(Treasure.Crown);
         }
     }
 

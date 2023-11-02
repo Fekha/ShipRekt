@@ -27,6 +27,7 @@ public enum Treasure
     Necklace,
     Coins,
     GreenDie,
+    BlueDie,
     PinkDie,
-    BlueDie
+    None
 }
