@@ -20,17 +20,18 @@ public class GameManager : MonoBehaviour
     private bool isBoardMaximized = true;
     public List<HexCoords> Spawns = new List<HexCoords>() { new HexCoords(2, 5, 0, 4), new HexCoords(2, 8, 5, 3), new HexCoords(5, 8, 4, 2), new HexCoords(8, 5, 3, 1), new HexCoords(8,2,2,0), new HexCoords(5,2,1,5)};
     private int playerTurn = 0;
-    private int numPlayers = 2;
+    private int numPlayers = Settings.NumPlayers;
     internal Sprite[] OrderSpirtes;
     internal bool[] ShipsDone;
-    internal Color[] PlayerColors = new Color[] { Color.green, Color.magenta, Color.blue, Color.yellow, Color.red, new Color(1.0f, 0.64f, 0.0f) };
-    // Start is called before the first frame update
+    internal int cannonRange = 2;
+    internal Color[] PlayerColors = new Color[] { Color.green, Color.magenta, Color.cyan, Color.yellow, Color.red, new Color(1.0f, 0.64f, 0.0f) };
     void Start()
     {
         i = this;
         ShipsDone = new bool[numPlayers];
         ShipsDone.Select(x => false).ToArray();
         MainCanvas.SetActive(true);
+        cannonRange = numPlayers == 2 ? 4 : numPlayers < 5 ? 3 : 2;
         OrderSpirtes = new Sprite[] { Resources.Load<Sprite>("Sprites/Orders/Evade"), Resources.Load<Sprite>("Sprites/Orders/Move"), Resources.Load<Sprite>("Sprites/Orders/TurnLeft"), Resources.Load<Sprite>("Sprites/Orders/TurnRight"), Resources.Load<Sprite>("Sprites/Orders/ShootLeft"), Resources.Load<Sprite>("Sprites/Orders/ShootRight"), Resources.Load<Sprite>("Sprites/Orders/None") };
         HexCoordParent = GameObject.Find("HexCoordParent").transform;
         OrderPanel = GameObject.Find("OrderPanel");
@@ -47,6 +48,7 @@ public class GameManager : MonoBehaviour
             Ships.Add(ship);
             Spawns.Remove(randomSpawn);
             MainCanvas.transform.Find($"OrderView/Viewport/Content/Player{i}").gameObject.SetActive(true);
+            MainCanvas.transform.Find($"LeaderboardPanel/Player{i}").gameObject.SetActive(true);
         }
         SetBoard();
     }
@@ -63,7 +65,18 @@ public class GameManager : MonoBehaviour
             StartCoroutine(TakeOrders());
         }
     }
-    
+    public void ShowLeaderboard()
+    {
+        foreach(var ship in Ships)
+        {
+            var player = MainCanvas.transform.Find($"LeaderboardPanel/Player{ship.id}");
+            for (int i = 0; i < ship.booty.Count(); i++)
+            {
+                player.Find($"Booty{i}").GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{(int)ship.booty[i]}");
+            }
+        }
+        MainCanvas.transform.Find("LeaderboardPanel").gameObject.SetActive(true);
+    }
     private IEnumerator TakeOrders()
     {
         playerTurn = 0;
@@ -72,7 +85,7 @@ public class GameManager : MonoBehaviour
         ViewButton.SetActive(false);
         for (int i = 0; i < 6; i++)
         {
-            var ShipsToMove = Ships.Where(x => x.newOrders[i] == Orders.Move).ToList();
+            var ShipsToMove = Ships.Where(x => x.newOrders[i] != Orders.None && x.newOrders[i] != Orders.ShootLeft && x.newOrders[i] != Orders.ShootRight).ToList();
             foreach (var ship in ShipsToMove)
             {
                 StartCoroutine(ship.Move(i));
@@ -81,7 +94,20 @@ public class GameManager : MonoBehaviour
             {
                 yield return null;
             }
-            foreach (var ship in Ships.Where(x => x.newOrders[i] != Orders.Move))
+
+            ShipsToMove = Ships.Where(x => x.newOrders[i] == Orders.ShootLeft || x.newOrders[i] == Orders.ShootRight).ToList();
+            foreach (var ship in ShipsToMove)
+            {
+                StartCoroutine(ship.Move(i));
+            }
+            while (ShipsToMove.Any(x => !ShipsDone[x.id]))
+            {
+                yield return null;
+            }
+
+            ShipsToMove = Ships.Where(x => x.newOrders[i] == Orders.None).ToList();
+            ShipsToMove.Select(x => ShipsDone[x.id] = false);
+            foreach (var ship in ShipsToMove)
             {
                 StartCoroutine(ship.Move(i));
             }
@@ -91,17 +117,34 @@ public class GameManager : MonoBehaviour
             }
             ShipsDone.Select(x => false).ToArray();
         }
-        for(int i = 0; i < Ships.Count; i++)
+        var shipsToDestroy = Ships.Where(x => x.newOrders.All(y => y == Orders.None)).ToList();
+        for(int i = 0; i < shipsToDestroy.Count; i++)
         {
-            if (Ships[i].newOrders.All(x => x == Orders.None))
-            {
-                MainCanvas.transform.Find($"OrderView/Viewport/Content/Player{Ships[i].id}").gameObject.SetActive(false);
-                numPlayers--;
-                Destroy(Ships[i]);
-            }
+            MainCanvas.transform.Find($"OrderView/Viewport/Content/Player{Ships[i].id}").gameObject.SetActive(false);
+            numPlayers--;
+            Destroy(shipsToDestroy[i]);
+            Ships.Remove(shipsToDestroy[i]);
         }
-        if (Ships.Any(x => !x.booty.Any(y=>y == Treasure.None)))
+        if (Ships.Any(x => !x.booty.Any(y => y == Treasure.None)) || Ships.Count <= 1)
         {
+            var gameOverPanel = MainCanvas.transform.Find("GameOver");
+            var gameOverText = gameOverPanel.Find("GameOverText").GetComponent<TextMeshProUGUI>();
+            if (Ships.Count == 1)
+            {
+                gameOverText.text = $"{Ships[0].shipName} Player Wins!";
+            }
+            else if (Ships.Count == 0)
+            {
+                gameOverText.text = $"Everyone Loses!";
+            }
+            else
+            {
+                //Delcare winners that have all 6 treasure 
+                foreach(var ship in Ships.Where(x => x.booty.All(y => y != Treasure.None)))
+                {
+                    gameOverText.text += $"{ship.shipName} Player Wins!\n";
+                }
+            }
             MainCanvas.transform.Find("GameOver").gameObject.SetActive(true);
         }
         else
@@ -118,7 +161,11 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < orderButtons.Count; i++)
         {
             orderButtons[i].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)Ships[playerTurn].oldOrders[i]];
-            orderButtons[i].GetComponent<Image>().color = PlayerColors[playerTurn];
+            if (Ships[playerTurn].oldOrders[i] == Orders.None) {
+                orderButtons[i].GetComponent<Image>().color = new Color(0, 0, 0, 0);
+            } else {
+                orderButtons[i].GetComponent<Image>().color = PlayerColors[playerTurn];
+            }
             Booty.transform.Find($"Booty{i}").GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{(int)Ships[playerTurn].booty[i]}");
         }
     }
@@ -133,7 +180,14 @@ public class GameManager : MonoBehaviour
                 var orderButton = playerOrders.transform.Find($"Order{j}Button");
                 orderButton.GetComponent<Button>().interactable = true;
                 orderButton.transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)Ships[i].newOrders[j]];
-                orderButton.GetComponent<Image>().color = PlayerColors[i];
+                if (Ships[i].newOrders[j] == Orders.None)
+                {
+                    orderButton.GetComponent<Image>().color = new Color(0, 0, 0, 0);
+                }
+                else
+                {
+                    orderButton.GetComponent<Image>().color = PlayerColors[i];
+                }
                 Ships[i].oldOrders[j] = Ships[i].newOrders[j];
             }
         }
@@ -209,7 +263,6 @@ public class GameManager : MonoBehaviour
             }
         }
     }
-
     private List<int> FindDifferences(Orders[] newOrders, Orders[] oldOrders)
     {
         var values = new List<int>();

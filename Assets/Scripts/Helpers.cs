@@ -34,3 +34,8 @@ public enum Treasure
     OrangeDie,
     None
 }
+
+public static class Settings
+{
+    public static int NumPlayers = 2;
+}
