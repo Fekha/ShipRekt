@@ -58,7 +58,7 @@ public class ShipManager : MonoBehaviour
                     }
                     else 
                     {
-                        var otherShipMovingToSameNode = GameManager.i.Ships.FirstOrDefault(i => i != this && i.newOrders[orderNum] == Orders.Move && i.GetNextPosition(i.currentPosition, i.direction).Compare(nextPosition));
+                        var otherShipMovingToSameNode = GameManager.i.Ships.Where(i => i != this && i.newOrders[orderNum] == Orders.Move && nextPosition.Compare(i.GetNextPosition(i.currentPosition, i.direction)));
                         var collidesWithShip = GameManager.i.Ships.FirstOrDefault(i => i.currentPosition.Compare(nextPosition));
                         if (collidesWithShip)
                         {
@@ -67,10 +67,13 @@ public class ShipManager : MonoBehaviour
                             LoseMovement(orderNum);
                            
                         }
-                        else if (otherShipMovingToSameNode)
+                        else if (otherShipMovingToSameNode.Count() > 0)
                         {
-                            otherShipMovingToSameNode.LoseMovement(orderNum);
-                            StartCoroutine(otherShipMovingToSameNode.Ram());
+                            foreach (var otherShip in otherShipMovingToSameNode)
+                            {
+                                otherShip.LoseMovement(orderNum);
+                                StartCoroutine(otherShip.Ram());
+                            }
                             LoseMovement(orderNum);
                             StartCoroutine(Ram());
                         }
@@ -143,17 +146,13 @@ public class ShipManager : MonoBehaviour
             case Orders.None:
             {
                 int bootyIndex = -1;
-                if (booty.Contains(Treasure.GreenDie))
+                for (int i = 6; i < 12; i++)
                 {
-                    bootyIndex = booty.ToList().IndexOf(Treasure.GreenDie);
-                }
-                else if (booty.Contains(Treasure.BlueDie))
-                {
-                    bootyIndex = booty.ToList().IndexOf(Treasure.BlueDie);
-                }
-                else if (booty.Contains(Treasure.PinkDie))
-                {
-                    bootyIndex = booty.ToList().IndexOf(Treasure.PinkDie);
+                    if (booty.Contains((Treasure)i))
+                    {
+                        bootyIndex = booty.ToList().IndexOf((Treasure)i);
+                        break;
+                    }
                 }
                 if (bootyIndex != -1)
                 {
@@ -204,7 +203,7 @@ public class ShipManager : MonoBehaviour
         }
         cannonsFinished[i] = true;
     }
-    private void AddBooty(Treasure treasure)
+    private IEnumerator AddBooty(Treasure treasure)
     {
         for (int k = 0; k < 6; k++)
         {
@@ -214,6 +213,16 @@ public class ShipManager : MonoBehaviour
                 break;
             }
         }
+        if ((int)treasure < 6)
+        {
+            var treasureObj = GameObject.Find($"Treasure/{(int)treasure}");
+            var originalPos = GameObject.Find($"Treasure/{(int)treasure}").transform.position;
+            treasureObj.transform.position = new Vector3(originalPos.x, .2f, originalPos.z);
+            treasureObj.transform.localScale = new Vector3(.5f, .5f, .5f);
+            yield return new WaitForSeconds(1f);
+            treasureObj.transform.position = originalPos;
+            treasureObj.transform.localScale = new Vector3(.3f, .3f, .3f);
+        }  
     }
     private HexCoords GetNextPosition(HexCoords _currentPos, HexDirection _direction)
     {
@@ -292,7 +301,7 @@ public class ShipManager : MonoBehaviour
                 break;
             }
         }
-        attacker.AddBooty(id == 0 ? Treasure.GreenDie : id == 1 ? Treasure.BlueDie : Treasure.PinkDie);
+        StartCoroutine(attacker.AddBooty(id == 0 ? Treasure.GreenDie : id == 1 ? Treasure.BlueDie : Treasure.PinkDie));
         transform.Find("Skull").gameObject.SetActive(true);
         yield return new WaitForSeconds(1.5f);
         transform.Find("Skull").gameObject.SetActive(false);
@@ -362,27 +371,27 @@ public class ShipManager : MonoBehaviour
     {
         if (nextPosition.Compare(new HexCoords(2, 5)) && !booty.Contains(Treasure.Earring))
         {
-            AddBooty(Treasure.Earring);
+            StartCoroutine(AddBooty(Treasure.Earring));
         }
         else if (nextPosition.Compare(new HexCoords(2, 8)) && !booty.Contains(Treasure.Necklace))
         {
-            AddBooty(Treasure.Necklace);
+            StartCoroutine(AddBooty(Treasure.Necklace));
         }
         else if (nextPosition.Compare(new HexCoords(5, 8)) && !booty.Contains(Treasure.Goblet))
         {
-            AddBooty(Treasure.Goblet);
+            StartCoroutine(AddBooty(Treasure.Goblet));
         }
         else if (nextPosition.Compare(new HexCoords(8, 5)) && !booty.Contains(Treasure.Ring))
         {
-            AddBooty(Treasure.Ring);
+            StartCoroutine(AddBooty(Treasure.Ring));
         }
         else if (nextPosition.Compare(new HexCoords(8, 2)) && !booty.Contains(Treasure.Coins))
         {
-            AddBooty(Treasure.Coins);
+            StartCoroutine(AddBooty(Treasure.Coins));
         }
         else if (nextPosition.Compare(new HexCoords(5, 2)) && !booty.Contains(Treasure.Crown))
         {
-            AddBooty(Treasure.Crown);
+            StartCoroutine(AddBooty(Treasure.Crown));
         }
     }
 
