@@ -44,7 +44,7 @@ public class ShipManager : MonoBehaviour
     }
     internal IEnumerator Move(int orderNum)
     {
-        GameManager.i.ShipsDone[id] = false;
+        GameManager.instance.ShipsDone[id] = false;
         var orderButton = GameObject.Find($"Player{id}").transform.Find($"Order{orderNum}Button");
         orderButton.GetComponent<Button>().interactable = false;
         switch (newOrders[orderNum])
@@ -62,9 +62,9 @@ public class ShipManager : MonoBehaviour
                     }
                     else 
                     {
-                        var otherShipMovingToSameNode = GameManager.i.Ships.Where(i => i != this && i.newOrders[orderNum] == Orders.Move && nextPosition.Compare(i.GetNextPosition(i.currentPosition, i.direction)));
+                        var otherShipMovingToSameNode = GameManager.instance.Ships.Where(i => i != this && i.newOrders[orderNum] == Orders.Move && nextPosition.Compare(i.GetNextPosition(i.currentPosition, i.direction)));
                         ShipManager collidesWithShip = null;
-                        foreach (var ship in GameManager.i.Ships.Where(x => x != this)) {
+                        foreach (var ship in GameManager.instance.Ships.Where(x => x != this)) {
                             if (nextPosition.Compare(ship.currentPosition))
                             {
                                 if (ship.newOrders[orderNum] != Orders.Move || ship.GetNextPosition(ship.currentPosition, ship.direction) == null)
@@ -91,7 +91,7 @@ public class ShipManager : MonoBehaviour
                         }
                         else
                         {
-                            var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
+                            var nodeToMoveTo = GameManager.instance.mapNodes[nextPosition.x, nextPosition.y];
                             var positionToEndAt = new Vector3(nodeToMoveTo.transform.position.x, .1f, nodeToMoveTo.transform.position.z);
                             var positionToMoveTo = nextPosition?.type == 1 ? transform.Find("Nose").transform.position : positionToEndAt;
                             while (positionToMoveTo != transform.position)
@@ -174,28 +174,28 @@ public class ShipManager : MonoBehaviour
             }
         }
         yield return new WaitForSeconds(.5f);
-        GameManager.i.ShipsDone[id] = true;
+        GameManager.instance.ShipsDone[id] = true;
     }
 
     private void LoseMovement(int orderNum)
     {
         var orderButton = GameObject.Find($"Player{id}").transform.Find($"Order{orderNum}Button");
         newOrders[orderNum] = Orders.Evade;
-        orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.Evade];
+        orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.instance.OrderSpirtes[(int)Orders.Evade];
     }
 
     private IEnumerator ShootCannonBall(HexDirection hexDirection, int i, int orderNum)
     {
         var cannonballPos = currentPosition;
-        for (int j = 0; j < GameManager.i.cannonRange; j++)
+        for (int j = 0; j < GameManager.instance.cannonRange; j++)
         {
             HexCoords nextPosition = GetNextPosition(cannonballPos, hexDirection);
-            var hitShip = GameManager.i.Ships.FirstOrDefault(i => i.currentPosition.Compare(nextPosition));
+            var hitShip = GameManager.instance.Ships.FirstOrDefault(i => i.currentPosition.Compare(nextPosition));
             if (hitShip)
             {
                 if (hitShip.newOrders[orderNum] != Orders.Evade)
                 {
-                    j = GameManager.i.cannonRange; //tells animation to stop
+                    j = GameManager.instance.cannonRange; //tells animation to stop
                     StartCoroutine(hitShip.TakeDamageFrom(this));
                 }
                 else
@@ -310,7 +310,7 @@ public class ShipManager : MonoBehaviour
             {
                 newOrders[k] = Orders.None;
                 var orderButton = GameObject.Find($"Player{id}").transform.Find($"Order{k}Button");
-                orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.None];
+                orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.instance.OrderSpirtes[(int)Orders.None];
                 orderButton.GetComponent<Image>().color = new Color(0, 0, 0, 0);
                 break;
             }
@@ -327,8 +327,8 @@ public class ShipManager : MonoBehaviour
         newOrders[orderIndex] = Orders.Evade;
         transform.Find("Heal").gameObject.SetActive(true);
         var orderButton = GameObject.Find($"Player{id}").transform.Find($"Order{orderIndex}Button");
-        orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.i.OrderSpirtes[(int)Orders.Evade];
-        orderButton.GetComponent<Image>().color = GameManager.i.PlayerColors[id];
+        orderButton.transform.Find("Order").GetComponent<Image>().sprite = GameManager.instance.OrderSpirtes[(int)Orders.Evade];
+        orderButton.GetComponent<Image>().color = GameManager.instance.PlayerColors[id];
         yield return new WaitForSeconds(1f);
         transform.Find("Heal").gameObject.SetActive(false);
     }
@@ -338,7 +338,7 @@ public class ShipManager : MonoBehaviour
         {
             if (nextPos.x >= 0 && nextPos.x < 11 && nextPos.y >= 0 && nextPos.y < 11)
             {
-                if (GameManager.i.mapNodes[nextPos.x, nextPos.y] != null)
+                if (GameManager.instance.mapNodes[nextPos.x, nextPos.y] != null)
                 {
                     return nextPos;
                 }
@@ -349,11 +349,11 @@ public class ShipManager : MonoBehaviour
 
     private IEnumerator AnimateCannonBall(HexCoords currPosition, HexCoords nextPosition, int j, bool teleporting)
     {
-        var currentNode = GameManager.i.mapNodes[currPosition.x, currPosition.y].transform.position;
+        var currentNode = GameManager.instance.mapNodes[currPosition.x, currPosition.y].transform.position;
         if (nextPosition != null)
         {
             var cannonBall = Instantiate(CannonBall);
-            var nodeToMoveTo = GameManager.i.mapNodes[nextPosition.x, nextPosition.y];
+            var nodeToMoveTo = GameManager.instance.mapNodes[nextPosition.x, nextPosition.y];
             if (nodeToMoveTo != null)
             {
                 var nodeToMoveToPos = nodeToMoveTo.transform.position;
@@ -365,7 +365,7 @@ public class ShipManager : MonoBehaviour
                     yield return null;
                 }
                 cannonBall.transform.position = positionToMoveTo;
-                if (j >= GameManager.i.cannonRange-1)
+                if (j >= GameManager.instance.cannonRange-1)
                 {
                     Instantiate(explosionPrefab, nodeToMoveToPos, Quaternion.identity);
                 }

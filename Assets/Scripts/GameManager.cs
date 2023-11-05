@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    internal static GameManager i;
+    internal static GameManager instance;
     internal List<ShipManager> Ships = new List<ShipManager>();
     private GameObject NodePrefab;
     private GameObject OrderPanel;
@@ -27,7 +27,7 @@ public class GameManager : MonoBehaviour
     internal Color[] PlayerColors = new Color[] { Color.green, Color.magenta, Color.cyan, Color.yellow, Color.red, new Color(1.0f, 0.64f, 0.0f) };
     void Start()
     {
-        i = this;
+        instance = this;
         ShipsDone = new bool[numPlayers];
         ShipsDone.Select(x => false).ToArray();
         MainCanvas.SetActive(true);
@@ -64,6 +64,10 @@ public class GameManager : MonoBehaviour
         {
             StartCoroutine(TakeOrders());
         }
+    }
+    public void BackToMenu()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("StartScene");
     }
     public void ShowLeaderboard()
     {
@@ -120,9 +124,10 @@ public class GameManager : MonoBehaviour
         var shipsToDestroy = Ships.Where(x => x.newOrders.All(y => y == Orders.None)).ToList();
         for(int i = 0; i < shipsToDestroy.Count; i++)
         {
-            MainCanvas.transform.Find($"OrderView/Viewport/Content/Player{Ships[i].id}").gameObject.SetActive(false);
+            MainCanvas.transform.Find($"OrderView/Viewport/Content/Player{shipsToDestroy[i].id}").gameObject.SetActive(false);
+            MainCanvas.transform.Find($"LeaderboardPanel/Player{shipsToDestroy[i].id}").gameObject.SetActive(false);
             numPlayers--;
-            Destroy(shipsToDestroy[i]);
+            Destroy(shipsToDestroy[i].gameObject);
             Ships.Remove(shipsToDestroy[i]);
         }
         if (Ships.Any(x => !x.booty.Any(y => y == Treasure.None)) || Ships.Count <= 1)
@@ -164,7 +169,7 @@ public class GameManager : MonoBehaviour
             if (Ships[playerTurn].oldOrders[i] == Orders.None) {
                 orderButtons[i].GetComponent<Image>().color = new Color(0, 0, 0, 0);
             } else {
-                orderButtons[i].GetComponent<Image>().color = PlayerColors[playerTurn];
+                orderButtons[i].GetComponent<Image>().color = PlayerColors[Ships[playerTurn].id];
             }
             Booty.transform.Find($"Booty{i}").GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{(int)Ships[playerTurn].booty[i]}");
         }
@@ -172,23 +177,23 @@ public class GameManager : MonoBehaviour
 
     private void SetAllPlayersOrders()
     {
-        for (int i = 0; i < numPlayers; i++)
+        foreach(var ship in Ships)
         {
-            var playerOrders = GameObject.Find($"OrderView/Viewport/Content/Player{i}");
+            var playerOrders = GameObject.Find($"OrderView/Viewport/Content/Player{ship.id}");
             for (int j = 0; j < 6; j++)
             {
                 var orderButton = playerOrders.transform.Find($"Order{j}Button");
                 orderButton.GetComponent<Button>().interactable = true;
-                orderButton.transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)Ships[i].newOrders[j]];
-                if (Ships[i].newOrders[j] == Orders.None)
+                orderButton.transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)ship.newOrders[j]];
+                if (ship.newOrders[j] == Orders.None)
                 {
                     orderButton.GetComponent<Image>().color = new Color(0, 0, 0, 0);
                 }
                 else
                 {
-                    orderButton.GetComponent<Image>().color = PlayerColors[i];
+                    orderButton.GetComponent<Image>().color = PlayerColors[ship.id];
                 }
-                Ships[i].oldOrders[j] = Ships[i].newOrders[j];
+                ship.oldOrders[j] = ship.newOrders[j];
             }
         }
     }
