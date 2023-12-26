@@ -10,6 +10,7 @@ public class ShipManager : MonoBehaviour
     public int directionNum;
     public int x;
     public int y;
+    internal bool isCPU;
     internal int id;
     internal string shipName;
     internal HexDirection direction;
@@ -41,6 +42,7 @@ public class ShipManager : MonoBehaviour
         explosionPrefab = Resources.Load<GameObject>("Prefabs/Explosion");
         initialPosition = transform.position;
         shipName = PlayerColorNames[id];
+        isCPU = id != 0;
     }
     internal IEnumerator Move(int orderNum)
     {

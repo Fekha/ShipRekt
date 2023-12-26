@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,6 +10,7 @@ public class GameManager : MonoBehaviour
 {
     internal static GameManager instance;
     internal List<ShipManager> Ships = new List<ShipManager>();
+    internal ShipManager CurrentShip = new ShipManager();
     private GameObject NodePrefab;
     private GameObject OrderPanel;
     private GameObject Booty;
@@ -58,10 +60,16 @@ public class GameManager : MonoBehaviour
         if (playerTurn < numPlayers-1)
         {
             playerTurn++;
+            CurrentShip = Ships[playerTurn];
             SetBoard();
+            if (CurrentShip.isCPU)
+            {
+                AIManager.TakeTurn();
+            }
         }
         else
         {
+            CurrentShip = null;
             StartCoroutine(TakeOrders());
         }
     }
@@ -163,15 +171,16 @@ public class GameManager : MonoBehaviour
 
     private void SetBoard()
     {
+        CurrentShip = Ships[playerTurn];
         for (int i = 0; i < orderButtons.Count; i++)
         {
-            orderButtons[i].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)Ships[playerTurn].oldOrders[i]];
-            if (Ships[playerTurn].oldOrders[i] == Orders.None) {
+            orderButtons[i].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)CurrentShip.oldOrders[i]];
+            if (CurrentShip.oldOrders[i] == Orders.None) {
                 orderButtons[i].GetComponent<Image>().color = new Color(0, 0, 0, 0);
             } else {
-                orderButtons[i].GetComponent<Image>().color = PlayerColors[Ships[playerTurn].id];
+                orderButtons[i].GetComponent<Image>().color = PlayerColors[CurrentShip.id];
             }
-            Booty.transform.Find($"Booty{i}").GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{(int)Ships[playerTurn].booty[i]}");
+            Booty.transform.Find($"Booty{i}").GetComponent<Image>().sprite = Resources.Load<Sprite>($"Sprites/Treasure/{(int)CurrentShip.booty[i]}");
         }
     }
 
@@ -251,23 +260,27 @@ public class GameManager : MonoBehaviour
     }
     public void ChangeNumber(int orderNumber)
     {
-        var currentShip = Ships[playerTurn];
-        if (currentShip.newOrders[orderNumber] != Orders.None)
+        if (CurrentShip.newOrders[orderNumber] != Orders.None)
         {
-            var differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
+            var differences = FindDifferences(CurrentShip.newOrders, CurrentShip.oldOrders);
             if (differences.Count < 2 || differences.Contains(orderNumber))
             {
-                var newOrderInt = ((int)currentShip.newOrders[orderNumber] + 1) % 6;
-                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[newOrderInt];
-                currentShip.newOrders[orderNumber] = (Orders)newOrderInt;
+                UpdateOrderNumber(orderNumber, ((int)CurrentShip.newOrders[orderNumber] + 1) % 6);
             }
-            differences = FindDifferences(currentShip.newOrders, currentShip.oldOrders);
+            differences = FindDifferences(CurrentShip.newOrders, CurrentShip.oldOrders);
             for (int i = 0; i < 6; i++)
             {
                 orderButtons[i].transform.Find("Selected").gameObject.SetActive(differences.Contains(i));
             }
         }
     }
+
+    public void UpdateOrderNumber(int orderNumber, int numberToChangeTo)
+    {
+        orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[numberToChangeTo];
+        CurrentShip.newOrders[orderNumber] = (Orders)numberToChangeTo;
+    }
+
     private List<int> FindDifferences(Orders[] newOrders, Orders[] oldOrders)
     {
         var values = new List<int>();
