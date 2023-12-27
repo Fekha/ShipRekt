@@ -38,4 +38,5 @@ public enum Treasure
 public static class Settings
 {
     public static int NumPlayers = 2;
+    public static int NumNPCs = 1;
 }

@@ -42,7 +42,7 @@ public class ShipManager : MonoBehaviour
         explosionPrefab = Resources.Load<GameObject>("Prefabs/Explosion");
         initialPosition = transform.position;
         shipName = PlayerColorNames[id];
-        isCPU = id != 0;
+        isCPU = id >= Settings.NumPlayers-Settings.NumNPCs;
     }
     internal IEnumerator Move(int orderNum)
     {

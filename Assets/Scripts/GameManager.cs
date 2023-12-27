@@ -60,11 +60,10 @@ public class GameManager : MonoBehaviour
         if (playerTurn < numPlayers-1)
         {
             playerTurn++;
-            CurrentShip = Ships[playerTurn];
             SetBoard();
             if (CurrentShip.isCPU)
             {
-                AIManager.TakeTurn();
+                StartCoroutine(AIManager.TakeTurn());
             }
         }
         else
@@ -258,14 +257,20 @@ public class GameManager : MonoBehaviour
         OrderPanel.gameObject.SetActive(isBoardMaximized);
         ViewButton.GetComponentInChildren<TextMeshProUGUI>().text = isBoardMaximized ? "Show All" : "Show Yours";
     }
-    public void ChangeNumber(int orderNumber)
+    public void PlayerChangeOrder(int orderNumber)
+    {
+        ChangeOrder(orderNumber, ((int)CurrentShip.newOrders[orderNumber] + 1) % 6);
+    }
+
+    public void ChangeOrder(int orderNumber, int numberToChangeTo)
     {
         if (CurrentShip.newOrders[orderNumber] != Orders.None)
         {
             var differences = FindDifferences(CurrentShip.newOrders, CurrentShip.oldOrders);
             if (differences.Count < 2 || differences.Contains(orderNumber))
             {
-                UpdateOrderNumber(orderNumber, ((int)CurrentShip.newOrders[orderNumber] + 1) % 6);
+                orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[(int)numberToChangeTo];
+                CurrentShip.newOrders[orderNumber] = (Orders)numberToChangeTo;
             }
             differences = FindDifferences(CurrentShip.newOrders, CurrentShip.oldOrders);
             for (int i = 0; i < 6; i++)
@@ -273,12 +278,6 @@ public class GameManager : MonoBehaviour
                 orderButtons[i].transform.Find("Selected").gameObject.SetActive(differences.Contains(i));
             }
         }
-    }
-
-    public void UpdateOrderNumber(int orderNumber, int numberToChangeTo)
-    {
-        orderButtons[orderNumber].transform.Find("Order").GetComponent<Image>().sprite = OrderSpirtes[numberToChangeTo];
-        CurrentShip.newOrders[orderNumber] = (Orders)numberToChangeTo;
     }
 
     private List<int> FindDifferences(Orders[] newOrders, Orders[] oldOrders)

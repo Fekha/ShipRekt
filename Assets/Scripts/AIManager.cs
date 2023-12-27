@@ -4,9 +4,15 @@ using UnityEngine;
 
 public static class AIManager 
 {
-    public static void TakeTurn()
+    public static IEnumerator TakeTurn()
     {
-        GameManager.instance.UpdateOrderNumber(2, 2);
+        
+        GameManager.instance.ChangeOrder(Random.Range(0, 6), Random.Range(0, 6));
+        yield return new WaitForSeconds(1f);
+        GameManager.instance.ChangeOrder(Random.Range(0, 6), Random.Range(0, 6));
+        yield return new WaitForSeconds(1f);
         GameManager.instance.EndTurn();
+        yield return new WaitForSeconds(.1f);
+
     }
 }
